@@ -1,0 +1,571 @@
+{
+  "info": {
+    "name": "Treedom Training Authority (هيئة التدريب)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "{{base_url}}" },
+    { "key": "provider_token", "value": "" },
+    { "key": "admin_token", "value": "" },
+    { "key": "coach_token", "value": "" },
+    { "key": "trainee_token", "value": "" },
+    { "key": "program_id", "value": "1" },
+    { "key": "session_id", "value": "1" },
+    { "key": "coach_id", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "0. Auth",
+      "item": [
+        {
+          "name": "Lookups - specializations",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/specializations", "host": ["{{base_url}}"], "path": ["specializations"] }
+          }
+        },
+        {
+          "name": "هيئة التدريب - Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "هيئة التدريب الوطنية" },
+                { "key": "license_number", "value": "LIC-2026-001" },
+                { "key": "bio", "value": "نبذة تعريفية عن هيئة التدريب" },
+                { "key": "official_address", "value": "الرياض - حي العليا" },
+                { "key": "branch_address", "value": "جدة - فرع التحلية" },
+                { "key": "specialization_ids[]", "value": "1" },
+                { "key": "specialization_ids[]", "value": "2" },
+                { "key": "responsible_name", "value": "أحمد محمد" },
+                { "key": "responsible_email", "value": "ahmed@example.com" },
+                { "key": "responsible_country_code", "value": "966" },
+                { "key": "responsible_phone", "value": "512345678" },
+                { "key": "responsible_position", "value": "المدير التنفيذي" },
+                { "key": "email", "value": "authority@example.com" },
+                { "key": "country_code", "value": "966" },
+                { "key": "phone", "value": "500000001" },
+                { "key": "password", "value": "password" },
+                { "key": "logo", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/provider/auth/register", "host": ["{{base_url}}"], "path": ["provider", "auth", "register"] }
+          }
+        },
+        {
+          "name": "هيئة التدريب - Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"authority@example.com\",\n  \"password\": \"password\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/provider/auth/login", "host": ["{{base_url}}"], "path": ["provider", "auth", "login"] }
+          }
+        },
+        {
+          "name": "مدرب - Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"coach@example.com\",\n  \"password\": \"password\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/provider/auth/coach/login", "host": ["{{base_url}}"], "path": ["provider", "auth", "coach", "login"] }
+          }
+        },
+        {
+          "name": "سوبر أدمن - Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"123456\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{base_url}}/admin/auth/login", "host": ["{{base_url}}"], "path": ["admin", "auth", "login"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "1. الصفحة الرئيسية (Dashboard)",
+      "item": [
+        {
+          "name": "GET dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/provider/dashboard?upcoming_sessions_limit=3&active_programs_per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["provider", "dashboard"],
+              "query": [
+                { "key": "upcoming_sessions_limit", "value": "3" },
+                { "key": "active_programs_per_page", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. البرامج التدريبية (List)",
+      "item": [
+        {
+          "name": "GET programs (filters: status, activity, search)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/provider/programs?status=2&activity=active&search=",
+              "host": ["{{base_url}}"],
+              "path": ["provider", "programs"],
+              "query": [
+                { "key": "status", "value": "2", "description": "0 draft, 1 pending, 2 approved, 3 rejected" },
+                { "key": "activity", "value": "active", "description": "active | completed" },
+                { "key": "search", "value": "" },
+                { "key": "per_page", "value": "15" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET approved programs (dropdown)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/programs/approved", "host": ["{{base_url}}"], "path": ["provider", "programs", "approved"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. إضافة برنامج جديد",
+      "item": [
+        {
+          "name": "Lookups - categories",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Lookups - coaches list",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/coaches/list", "host": ["{{base_url}}"], "path": ["provider", "coaches", "list"] }
+          }
+        },
+        {
+          "name": "POST create program + nested sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name[ar]", "value": "برنامج القيادة الإدارية" },
+                { "key": "name[en]", "value": "Leadership Program" },
+                { "key": "description[ar]", "value": "وصف البرنامج" },
+                { "key": "description[en]", "value": "Program description" },
+                { "key": "category_id", "value": "1" },
+                { "key": "coach_id", "value": "{{coach_id}}" },
+                { "key": "price_amount", "value": "325" },
+                { "key": "hours_count", "value": "36" },
+                { "key": "max_capacity", "value": "15" },
+                { "key": "sessions_count_planned", "value": "12" },
+                { "key": "content_type", "value": "2", "description": "0 renewable, 1 recorded, 2 live zoom" },
+                { "key": "start_date", "value": "2026-09-25" },
+                { "key": "end_date", "value": "2026-12-10" },
+                { "key": "keywords[]", "value": "UI Design" },
+                { "key": "is_draft", "value": "1" },
+                { "key": "sessions[0][title][ar]", "value": "المادة والأساسيات" },
+                { "key": "sessions[0][title][en]", "value": "Basics" },
+                { "key": "sessions[0][date]", "value": "2026-09-26" },
+                { "key": "sessions[0][starts_at]", "value": "10:00" },
+                { "key": "sessions[0][duration_minutes]", "value": "60" },
+                { "key": "sessions[0][type]", "value": "0", "description": "0 live zoom, 1 recorded" },
+                { "key": "sessions[0][meeting_url]", "value": "https://zoom.us/j/123" },
+                { "key": "sessions[0][coach_id]", "value": "{{coach_id}}" },
+                { "key": "sessions[1][title][ar]", "value": "جلسة مسجلة" },
+                { "key": "sessions[1][title][en]", "value": "Recorded session" },
+                { "key": "sessions[1][date]", "value": "2026-09-27" },
+                { "key": "sessions[1][starts_at]", "value": "10:00" },
+                { "key": "sessions[1][duration_minutes]", "value": "45" },
+                { "key": "sessions[1][type]", "value": "1" },
+                { "key": "sessions[1][video]", "type": "file", "src": [] },
+                { "key": "attachments[]", "type": "file", "src": [] }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/provider/programs", "host": ["{{base_url}}"], "path": ["provider", "programs"] }
+          }
+        },
+        {
+          "name": "POST submit for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/programs/{{program_id}}/submit", "host": ["{{base_url}}"], "path": ["provider", "programs", "{{program_id}}", "submit"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. تفاصيل البرنامج",
+      "item": [
+        {
+          "name": "GET program details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/programs/{{program_id}}", "host": ["{{base_url}}"], "path": ["provider", "programs", "{{program_id}}"] }
+          }
+        },
+        {
+          "name": "PUT edit program",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": { \"ar\": \"برنامج القيادة الإدارية\", \"en\": \"Leadership Program\" },\n  \"price_amount\": 325,\n  \"max_capacity\": 15\n}" },
+            "url": { "raw": "{{base_url}}/provider/programs/{{program_id}}", "host": ["{{base_url}}"], "path": ["provider", "programs", "{{program_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. إدارة الجلسات",
+      "item": [
+        {
+          "name": "GET sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/provider/sessions?program_id={{program_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["provider", "sessions"],
+              "query": [{ "key": "program_id", "value": "{{program_id}}" }, { "key": "search", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "POST add session (Zoom or recorded)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title[ar]", "value": "جلسة التخطيط" },
+                { "key": "title[en]", "value": "Planning session" },
+                { "key": "program_id", "value": "{{program_id}}" },
+                { "key": "date", "value": "2026-10-01" },
+                { "key": "starts_at", "value": "10:00" },
+                { "key": "ends_at", "value": "11:00" },
+                { "key": "coach_id", "value": "{{coach_id}}" },
+                { "key": "type", "value": "0", "description": "0 Zoom, 1 recorded" },
+                { "key": "meeting_url", "value": "https://zoom.us/j/555" },
+                { "key": "video", "type": "file", "src": [], "disabled": true }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/provider/sessions", "host": ["{{base_url}}"], "path": ["provider", "sessions"] }
+          }
+        },
+        {
+          "name": "POST start session + notify students",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/sessions/{{session_id}}/start", "host": ["{{base_url}}"], "path": ["provider", "sessions", "{{session_id}}", "start"] }
+          }
+        },
+        {
+          "name": "POST notify students with Zoom link",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/sessions/{{session_id}}/notify", "host": ["{{base_url}}"], "path": ["provider", "sessions", "{{session_id}}", "notify"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. جلسات اليوم",
+      "item": [
+        {
+          "name": "GET today sessions (coach token)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{coach_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/provider/today-sessions?status=all",
+              "host": ["{{base_url}}"],
+              "path": ["provider", "today-sessions"],
+              "query": [{ "key": "status", "value": "all", "description": "all|running|scheduled|ended" }]
+            }
+          }
+        },
+        {
+          "name": "POST start today session (coach)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{coach_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/today-sessions/{{session_id}}/start", "host": ["{{base_url}}"], "path": ["provider", "today-sessions", "{{session_id}}", "start"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. إدارة المدربين",
+      "item": [
+        {
+          "name": "GET coaches",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/coaches", "host": ["{{base_url}}"], "path": ["provider", "coaches"] }
+          }
+        },
+        {
+          "name": "POST invite/create coach",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "د. سارة علي" },
+                { "key": "email", "value": "sara@example.com" },
+                { "key": "country_code", "value": "966" },
+                { "key": "phone", "value": "512345678" },
+                { "key": "bio", "value": "مدربة معتمدة في التطوير المهني" },
+                { "key": "years_of_experience", "value": "8" },
+                { "key": "specialization_id", "value": "1" },
+                { "key": "image", "type": "file", "src": "" },
+                { "key": "id_card_image", "type": "file", "src": "" },
+                { "key": "cv", "type": "file", "src": "" },
+                { "key": "preset", "value": "create_and_teach", "description": "create_and_teach | teach_only | create_only | full" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/provider/coaches", "host": ["{{base_url}}"], "path": ["provider", "coaches"] }
+          }
+        },
+        {
+          "name": "POST resend coach invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/coaches/{{coach_id}}/resend-invitation", "host": ["{{base_url}}"], "path": ["provider", "coaches", "{{coach_id}}", "resend-invitation"] }
+          }
+        },
+        {
+          "name": "GET coach invitation (public)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Accept", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/provider/auth/coach-invitations/{{invitation_token}}", "host": ["{{base_url}}"], "path": ["provider", "auth", "coach-invitations", "{{invitation_token}}"] }
+          }
+        },
+        {
+          "name": "POST accept coach invitation (public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{invitation_token}}\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\"\n}" },
+            "url": { "raw": "{{base_url}}/provider/auth/coach-invitations/accept", "host": ["{{base_url}}"], "path": ["provider", "auth", "coach-invitations", "accept"] }
+          }
+        },
+        {
+          "name": "GET coach-permissions catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/coach-permissions", "host": ["{{base_url}}"], "path": ["provider", "coach-permissions"] }
+          }
+        },
+        {
+          "name": "PUT assign coach permissions",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{provider_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"preset\": \"teach_only\"\n}" },
+            "url": { "raw": "{{base_url}}/provider/coaches/{{coach_id}}/permissions", "host": ["{{base_url}}"], "path": ["provider", "coaches", "{{coach_id}}", "permissions"] }
+          }
+        },
+        {
+          "name": "GET my permissions (coach token)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{coach_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/provider/my-permissions", "host": ["{{base_url}}"], "path": ["provider", "my-permissions"] }
+          }
+        },
+        {
+          "name": "POST coach create session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{coach_token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title[ar]", "value": "جلسة جديدة" },
+                { "key": "title[en]", "value": "New session" },
+                { "key": "program_id", "value": "{{program_id}}" },
+                { "key": "date", "value": "2026-10-01" },
+                { "key": "starts_at", "value": "10:00" },
+                { "key": "ends_at", "value": "11:00" },
+                { "key": "type", "value": "0" },
+                { "key": "meeting_url", "value": "https://zoom.us/j/555" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/provider/coach-sessions", "host": ["{{base_url}}"], "path": ["provider", "coach-sessions"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. سوبر أدمن - موافقة البرامج",
+      "item": [
+        {
+          "name": "GET pending programs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/programs?status=1",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "programs"],
+              "query": [{ "key": "status", "value": "1", "description": "1 pending, 2 approved, 3 rejected" }]
+            }
+          }
+        },
+        {
+          "name": "POST approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/admin/programs/{{program_id}}/approve", "host": ["{{base_url}}"], "path": ["admin", "programs", "{{program_id}}", "approve"] }
+          }
+        },
+        {
+          "name": "POST reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"reject_reason\": \"المحتوى غير مكتمل\"\n}" },
+            "url": { "raw": "{{base_url}}/admin/programs/{{program_id}}/reject", "host": ["{{base_url}}"], "path": ["admin", "programs", "{{program_id}}", "reject"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. الطالب - الجلسات والإشعارات",
+      "item": [
+        {
+          "name": "GET my sessions (with Zoom links)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{trainee_token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/trainee/sessions?upcoming=1",
+              "host": ["{{base_url}}"],
+              "path": ["trainee", "sessions"],
+              "query": [{ "key": "upcoming", "value": "1" }]
+            }
+          }
+        },
+        {
+          "name": "GET my notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{trainee_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/trainee/notifications", "host": ["{{base_url}}"], "path": ["trainee", "notifications"] }
+          }
+        }
+      ]
+    }
+  ]
+}
