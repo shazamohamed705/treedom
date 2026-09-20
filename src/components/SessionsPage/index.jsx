@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchSessions } from "../services/api";
-import { sessionTypeUiKey } from "../services/sessionType";
-import Pagination from "./Pagination";
+import { fetchSessions } from "../../services/api";
+import { sessionTypeUiKey } from "../../services/sessionType";
+import Pagination from "../Pagination";
 
 function parseLocalDate(raw) {
   if (!raw) return null;
