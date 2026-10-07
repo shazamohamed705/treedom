@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { fetchCoachProgram } from "../services/api";
 import { hasPermission } from "../services/auth";
+import TrainingContentPage, { TrainingContentView } from "./TrainingContentPage";
+import { AddQuizModal } from "./AssessmentsPage";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icons
@@ -16,6 +18,8 @@ const IcoEdit    = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="n
 const IcoCheck   = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>;
 const IcoX       = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="3" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
 const IcoPin     = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>;
+const IcoPlus    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+const IcoQuiz    = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" strokeWidth="2" strokeLinecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Status config — API returns status.value (2=approved, 1=review, 0=rejected)
@@ -108,9 +112,9 @@ function Checklist({ items = [], readiness }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Sessions accordion
+// Sessions accordion — shows TrainingContentView inside the dropdown
 // ─────────────────────────────────────────────────────────────────────────────
-function SessionsAccordion({ sessions = [] }) {
+function SessionsAccordion() {
   const [open, setOpen] = useState(false);
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" dir="ltr">
@@ -120,58 +124,93 @@ function SessionsAccordion({ sessions = [] }) {
           <IcoChevron />
         </span>
         <span className="text-base font-bold" style={{ color: "#024677" }}>
-          المحتوى التدريبي ({sessions.length} جلسة)
+          المحتوى التدريبي
         </span>
       </button>
       {open && (
-        <div className="border-t border-slate-100">
-          {sessions.length === 0 ? (
-            <p className="text-sm text-slate-400 text-right px-5 py-4">لا توجد جلسات.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {sessions.map((s, i) => (
-                <div key={s.id ?? i} className="px-5 py-3 flex items-center justify-between gap-3" dir="rtl">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      style={{ background: "#14b8a6" }}>{i + 1}</span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{s.title}</p>
-                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                        <span className="text-[11px] text-slate-400">{s.type?.text ?? s.type ?? ""}</span>
-                        {s.location && (
-                          <span className="flex items-center gap-1 text-[11px] text-slate-400">
-                            <IcoPin />{s.location}
-                          </span>
-                        )}
-                        {/* coach attendance */}
-                        {s.coach_attendance && (
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            s.coach_attendance.status_key === "present"
-                              ? "bg-green-50 text-green-700"
-                              : "bg-red-50 text-red-600"
-                          }`}>
-                            {typeof s.coach_attendance.status_label === "object" ? (s.coach_attendance.status_label.text ?? s.coach_attendance.status_label.value ?? "—") : (s.coach_attendance.status_label ?? "—")}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[11px] text-slate-500">{s.date}</p>
-                    <p className="text-[11px] text-slate-400">{s.starts_at} — {s.ends_at}</p>
-                    {s.attendance_summary && (
-                      <p className="text-[10px] text-slate-400 mt-0.5">
-                        حضور: {s.attendance_summary.trainees_present} / غياب: {s.attendance_summary.trainees_absent}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="border-t border-slate-100 p-4" dir="rtl">
+          <TrainingContentView />
         </div>
       )}
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Quizzes accordion
+// ─────────────────────────────────────────────────────────────────────────────
+const MOCK_QUIZZES = [
+  { id: 1, title: "كويز مراجعة قواعد اللغة الإنجليزية", type: "كويز تدريبي",  questions: 10 },
+  { id: 2, title: "كويز تجميعي — الوحدة الأولى",         type: "كويز مُقيَّم", questions: 15 },
+];
+
+const TYPE_COLOR = { "كويز تدريبي": "#d97706", "كويز مُقيَّم": "#16a34a" };
+
+function QuizzesAccordion() {
+  const [open,      setOpen]      = useState(false);
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <>
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" dir="ltr">
+        {/* header row */}
+        <div className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition">
+          {/* toggle arrow */}
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            className={`transition-transform duration-200 text-slate-400 ${open ? "rotate-180" : ""}`}
+          >
+            <IcoChevron />
+          </button>
+
+          {/* title + add button */}
+          <div className="flex items-center gap-3" dir="rtl">
+            <span className="text-base font-bold" style={{ color: "#024677" }}>التقييمات والكويزات</span>
+            <IcoQuiz />
+            <button
+              onClick={() => setShowModal(true)}
+              className="flex items-center gap-1 text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition hover:opacity-90"
+              style={{ background: "#024677" }}
+            >
+              <IcoPlus />
+              إنشاء كويز
+            </button>
+          </div>
+        </div>
+
+        {/* body */}
+        {open && (
+          <div className="border-t border-slate-100 p-4" dir="rtl">
+            {MOCK_QUIZZES.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-6">لا توجد كويزات بعد</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {MOCK_QUIZZES.map(q => (
+                  <div key={q.id}
+                    className="flex items-center justify-between px-4 py-3 rounded-xl border border-slate-100 bg-slate-50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold" style={{ color: "#024677" }}>{q.title}</span>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full"
+                        style={{
+                          background: TYPE_COLOR[q.type] + "18",
+                          color: TYPE_COLOR[q.type],
+                        }}>
+                        {q.type}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">{q.questions} سؤال</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {showModal && <AddQuizModal onClose={() => setShowModal(false)} />}
+    </>
   );
 }
 
@@ -338,7 +377,7 @@ export default function TrainerProgramViewPage({ programId, onBack, onEdit }) {
 
             {/* sessions accordion */}
             <div className="max-w-5xl ml-auto">
-              <SessionsAccordion sessions={data.sessions ?? []} />
+              <SessionsAccordion />
             </div>
 
             {/* edit button — only if user has programs.update permission */}

@@ -1,4 +1,4 @@
-const BASE_URL = "https://treedom.storge-ai.com/api";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "https://treedom.storge-ai.com/api";
 
 import { getToken, getUserRole, isIndeCoach } from "./auth";
 import { assertApiPathAllowed, resolveNotificationRole } from "./apiScope";

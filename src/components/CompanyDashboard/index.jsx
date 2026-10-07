@@ -6,10 +6,7 @@ import {
 } from "recharts";
 import { fetchCompanyDashboard, fetchCompanyPrograms } from "../../services/api";
 import { mapCompanyFollowUp } from "../companyFollowUp";
-
-// ─── Brand colors ────────────────────────────────────────────────────────────
-const BRAND = "#024677";
-const TEAL  = "#14b8a6";
+import { BRAND, TEAL, TEAL_LIGHT } from "../../constants/colors";
 
 // ─── Tiny SVG icon helper ─────────────────────────────────────────────────────
 const Ico = ({ d, size = 18, stroke = "currentColor", sw = 1.8, fill = "none", viewBox = "0 0 24 24" }) => (

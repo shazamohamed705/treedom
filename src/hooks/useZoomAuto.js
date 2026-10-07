@@ -3,7 +3,8 @@ import { fetchProviderSettings } from "../services/api";
 
 export function isZoomAutoFromSettings(data) {
   const z = data?.zoom ?? data?.data?.zoom ?? {};
-  return z.mode === "api" && z.api_configured === true;
+  // يكفي إن الـ mode = "api" حتى لو api_configured مش موجود
+  return z.mode === "api";
 }
 
 export default function useZoomAuto() {

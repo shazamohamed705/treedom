@@ -40,7 +40,7 @@ function TreedomLogo({ size = 32 }) {
   );
 }
 
-export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setCollapsed, mobileOpen = false, onClose, onLogout, onSettingsSub, onChildNav, activeSettingsChild }) {
+export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setCollapsed, mobileOpen = false, onClose, onLogout, onSettingsSub, onChildNav, activeSettingsChild, activeChildPath }) {
   const isOpen = mobileOpen;
   const [openNav, setOpenNav] = useState(-1);
   const itemRefs = useRef([]);
@@ -50,6 +50,14 @@ export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setC
     const idx = (data.navItems ?? []).findIndex(it => it.icon === "settings");
     if (idx >= 0) setOpenNav(idx);
   }, [activeSettingsChild, data.navItems]);
+
+  // Auto-open parent when a child route is active
+  useEffect(() => {
+    const idx = (data.navItems ?? []).findIndex(
+      it => it.children?.some(c => c.path === activeChildPath)
+    );
+    if (idx >= 0) setOpenNav(idx);
+  }, [activeChildPath, data.navItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (openNav < 0) return;
@@ -171,19 +179,23 @@ export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setC
 
                   {showSubMenu && hasChildren && (
                     <div className="mt-0.5 mr-3 space-y-0.5">
-                      {item.children.map(child => (
-                        <button
-                          key={child.path}
-                          onClick={() => {
-                            if (onChildNav) onChildNav(child.path);
-                            else onClose?.();
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-white hover:bg-white/10 transition-all text-right"
-                        >
-                          <span className="w-1 h-1 rounded-full bg-teal-400/60 shrink-0" />
-                          {child.label}
-                        </button>
-                      ))}
+                      {item.children.map(child => {
+                        const childActive = activeChildPath === child.path;
+                        return (
+                          <button
+                            key={child.path}
+                            onClick={() => {
+                              if (onChildNav) onChildNav(child.path);
+                              else onClose?.();
+                            }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all text-right
+                              ${childActive ? "bg-teal-400 text-[#0f2a4a] font-semibold" : "text-white hover:bg-white/10"}`}
+                          >
+                            <span className={`w-1 h-1 rounded-full shrink-0 ${childActive ? "bg-[#0f2a4a]" : "bg-teal-400/60"}`} />
+                            {child.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

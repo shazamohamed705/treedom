@@ -123,15 +123,21 @@ function Skeleton() {
 // Video Player  — يحفظ موضع التشغيل في localStorage ويرجعه عند الفتح
 // ─────────────────────────────────────────────────────────────────────────────
 function VideoPlayer({ url, title, duration, sessionId, programId }) {
-  const videoRef  = useRef(null);
-  const saveTimer = useRef(null);
-  const [playing, setPlaying]   = useState(false);
-  const [current, setCurrent]   = useState(0);
-  const [total,   setTotal]     = useState(0);
-  const [native,  setNative]    = useState(() => consumeAutoplaySession(sessionId));
-  const [resumed, setResumed]   = useState(false); // هل تم استئناف من موضع محفوظ؟
+  const videoRef    = useRef(null);
+  const wrapRef     = useRef(null);
+  const saveTimer   = useRef(null);
+  const hideTimer   = useRef(null);
 
-  // مفتاح الكاش — sessionId أولاً عشان التقدم يتسجل صح حتى لو تغيّر رابط الفيديو
+  const [playing,   setPlaying]   = useState(false);
+  const [current,   setCurrent]   = useState(0);
+  const [total,     setTotal]     = useState(0);
+  const [volume,    setVolume]    = useState(1);
+  const [muted,     setMuted]     = useState(false);
+  const [showCtrl,  setShowCtrl]  = useState(true);
+  const [fullscr,   setFullscr]   = useState(false);
+  const [native,    setNative]    = useState(() => consumeAutoplaySession(sessionId));
+  const [resumed,   setResumed]   = useState(false);
+
   const cacheKey = sessionId
     ? `vid_pos_s${sessionId}`
     : (url ? `vid_pos_${url.slice(-40).replace(/\W/g, "_")}` : null);
@@ -145,7 +151,6 @@ function VideoPlayer({ url, title, duration, sessionId, programId }) {
     return `${m}:${String(sec).padStart(2,"0")}`;
   };
 
-  // استرجع الموضع المحفوظ من localStorage
   const getSavedPos = () => {
     const fromStore = getResumeTime(sessionId);
     if (fromStore > 0) return fromStore;
@@ -156,45 +161,55 @@ function VideoPlayer({ url, title, duration, sessionId, programId }) {
 
   const persistPos = (v) => {
     if (!v || !v.duration) return;
-    if (sessionId) {
-      saveWatchProgress(sessionId, {
-        programId,
-        currentTime: v.currentTime,
-        duration: v.duration,
-      });
-    }
+    if (sessionId) saveWatchProgress(sessionId, { programId, currentTime: v.currentTime, duration: v.duration });
     if (cacheKey && v.currentTime > 2) {
       try { localStorage.setItem(cacheKey, String(v.currentTime)); } catch {}
     }
   };
 
-  // احفظ الموضع كل 3 ثواني
   const startSaving = () => {
     if (saveTimer.current) return;
-    saveTimer.current = setInterval(() => {
-      persistPos(videoRef.current);
-    }, 3000);
+    saveTimer.current = setInterval(() => persistPos(videoRef.current), 3000);
   };
 
   const stopSaving = () => {
     if (saveTimer.current) { clearInterval(saveTimer.current); saveTimer.current = null; }
   };
 
-  // نظّف عند إلغاء الـ mount واحفظ آخر موضع
-  useEffect(() => () => {
-    persistPos(videoRef.current);
-    stopSaving();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { persistPos(videoRef.current); stopSaving(); }, []); // eslint-disable-line
 
-  // استكمال المشاهدة: شغّل المشغّل فورًا من الموضع المحفوظ
+  // autoplay من "استكمل المشاهدة"
   useEffect(() => {
     if (!native || !url) return;
     const v = videoRef.current;
     if (!v) return;
-    const tryPlay = () => { v.play?.().catch(() => {}); };
+    const tryPlay = () => v.play?.().catch(() => {});
     if (v.readyState >= 1) tryPlay();
     else v.addEventListener("loadedmetadata", tryPlay, { once: true });
   }, [native, url]);
+
+  // hide controls بعد ثانيتين من السكون
+  const showControls = () => {
+    setShowCtrl(true);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => { if (playing) setShowCtrl(false); }, 2500);
+  };
+
+  useEffect(() => () => { if (hideTimer.current) clearTimeout(hideTimer.current); }, []);
+
+  // fullscreen change listener
+  useEffect(() => {
+    const handler = () => setFullscr(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = () => {
+    const el = wrapRef.current;
+    if (!el) return;
+    if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {});
+    else document.exitFullscreen?.();
+  };
 
   const toggle = () => {
     if (!url) return;
@@ -204,7 +219,30 @@ function VideoPlayer({ url, title, duration, sessionId, programId }) {
     playing ? v.pause() : v.play();
   };
 
-  // عند تحميل metadata: اذهب للموضع المحفوظ
+  const seek = (e) => {
+    const v = videoRef.current;
+    if (!v || !total) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    v.currentTime = ratio * total;
+  };
+
+  const changeVolume = (e) => {
+    const val = parseFloat(e.target.value);
+    setVolume(val);
+    if (videoRef.current) videoRef.current.volume = val;
+    setMuted(val === 0);
+  };
+
+  const toggleMute = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    const next = !muted;
+    setMuted(next);
+    v.muted = next;
+    if (!next && volume === 0) { setVolume(0.5); v.volume = 0.5; }
+  };
+
   const onLoadedMetadata = (e) => {
     const v = e.target;
     setTotal(v.duration);
@@ -216,22 +254,45 @@ function VideoPlayer({ url, title, duration, sessionId, programId }) {
     }
   };
 
-  const onTimeUpdate = (e) => {
-    setCurrent(e.target.currentTime);
-  };
+  const onTimeUpdate = (e) => setCurrent(e.target.currentTime);
 
   const pct = total > 0 ? (current / total) * 100 : 0;
   const displayDuration = total > 0 ? fmt(total) : (duration ?? "0:00");
 
-  // الموضع المحفوظ للعرض في الـ thumbnail
   const savedPosDisplay = (() => {
     if (native) return null;
     const p = getSavedPos();
     return p > 5 ? fmt(p) : null;
   })();
 
+  const VolumeIcon = () => {
+    if (muted || volume === 0) return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+      </svg>
+    );
+    if (volume < 0.5) return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+    );
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      </svg>
+    );
+  };
+
   return (
-    <div className="rounded-xl overflow-hidden" dir="ltr" style={{ background: "#0d1b2e" }}>
+    <div
+      ref={wrapRef}
+      className="rounded-xl overflow-hidden select-none"
+      dir="ltr"
+      style={{ background: "#0d1b2e", position: "relative" }}
+      onMouseMove={native ? showControls : undefined}
+      onMouseEnter={native ? showControls : undefined}
+      onMouseLeave={() => { if (playing) setShowCtrl(false); }}
+    >
       {/* ── screen ── */}
       <div className="relative w-full" style={{ aspectRatio: "16/9" }}>
         {native && url ? (
@@ -239,121 +300,159 @@ function VideoPlayer({ url, title, duration, sessionId, programId }) {
             ref={videoRef}
             src={url}
             className="w-full h-full object-contain"
-            style={{ background: "#0d1b2e" }}
+            style={{ background: "#0d1b2e", cursor: showCtrl ? "default" : "none" }}
             onTimeUpdate={onTimeUpdate}
             onLoadedMetadata={onLoadedMetadata}
-            onPlay={() => { setPlaying(true); startSaving(); }}
-            onPause={() => { persistPos(videoRef.current); setPlaying(false); stopSaving(); }}
+            onPlay={() => { setPlaying(true); startSaving(); showControls(); }}
+            onPause={() => { persistPos(videoRef.current); setPlaying(false); setShowCtrl(true); stopSaving(); }}
+            onClick={toggle}
+            onDoubleClick={toggleFullscreen}
             onEnded={() => {
-              setPlaying(false);
-              stopSaving();
+              setPlaying(false); stopSaving(); setShowCtrl(true);
               const v = videoRef.current;
-              if (sessionId && v?.duration) {
-                saveWatchProgress(sessionId, {
-                  programId,
-                  currentTime: v.duration,
-                  duration: v.duration,
-                });
-              }
+              if (sessionId && v?.duration) saveWatchProgress(sessionId, { programId, currentTime: v.duration, duration: v.duration });
               if (cacheKey) { try { localStorage.removeItem(cacheKey); } catch {} }
             }}
           />
         ) : (
           <>
             {url && (
-              <video
-                src={url}
-                preload="metadata"
-                muted
-                playsInline
+              <video src={url} preload="metadata" muted playsInline
                 className="absolute inset-0 w-full h-full"
-                style={{ objectFit: "cover", pointerEvents: "none" }}
-              />
+                style={{ objectFit: "cover", pointerEvents: "none" }} />
             )}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.12) 40%, rgba(0,0,0,0.72))" }}
-            />
-            <p className="absolute bottom-10 right-3 text-white text-[13px] font-bold drop-shadow leading-tight max-w-[60%] text-right">
-              {title}
-            </p>
-            {/* عرض الدقيقة المحفوظة */}
+            <div className="absolute inset-0 pointer-events-none"
+              style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.12) 40%, rgba(0,0,0,0.72))" }} />
+            <p className="absolute bottom-10 right-3 text-white text-[13px] font-bold drop-shadow leading-tight max-w-[60%] text-right">{title}</p>
             <p className="absolute bottom-10 left-3 text-white/60 text-[11px] font-mono">
-              {savedPosDisplay ? (
-                <span style={{ color: "#5AEACF" }}>⏱ {savedPosDisplay}</span>
-              ) : displayDuration}
+              {savedPosDisplay ? <span style={{ color: "#5AEACF" }}>⏱ {savedPosDisplay}</span> : displayDuration}
             </p>
           </>
         )}
 
-        {/* toast استكمال المشاهدة */}
+        {/* resumed toast */}
         {resumed && (
-          <div
-            className="absolute top-3 right-3 px-3 py-1.5 rounded-xl text-[11px] font-bold text-white shadow-lg"
-            style={{ background: "rgba(90,234,207,0.9)", color: "#0d1b2e" }}
-          >
+          <div className="absolute top-3 right-3 px-3 py-1.5 rounded-xl text-[11px] font-bold shadow-lg"
+            style={{ background: "rgba(90,234,207,0.9)", color: "#0d1b2e" }}>
             ▶ استكمال من {fmt(current)}
           </div>
         )}
 
-        {!playing && (
-          <button
-            onClick={toggle}
+        {/* play button overlay — when paused or thumbnail */}
+        {(!playing || !native) && (
+          <button onClick={toggle}
             className="absolute inset-0 flex items-center justify-center group"
-            aria-label="تشغيل الفيديو"
-          >
-            <div
-              className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition group-hover:scale-110 shadow-lg"
-              style={{ background: "#5AEACF" }}
-            >
+            aria-label="تشغيل الفيديو">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center transition group-hover:scale-110 shadow-lg"
+              style={{ background: "#5AEACF" }}>
               <IcoPlay/>
             </div>
           </button>
         )}
-      </div>
 
-      {/* ── controls bar ── */}
-      <div className="px-3 pt-2 pb-3" style={{ background: "#0d1b2e" }}>
-        {/* progress bar */}
-        <div
-          className="relative w-full h-1.5 rounded-full mb-2 cursor-pointer"
-          style={{ background: "rgba(255,255,255,0.15)" }}
-          onClick={e => {
-            const v = videoRef.current;
-            if (!v || !total) return;
-            const rect = e.currentTarget.getBoundingClientRect();
-            const ratio = (e.clientX - rect.left) / rect.width;
-            v.currentTime = ratio * total;
-          }}
-        >
+        {/* ── hover controls overlay (شاهد-style) ── */}
+        {native && (
           <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: "#5AEACF" }}
-          />
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-2 border-[#5AEACF] bg-white shadow"
-            style={{ left: `calc(${pct}% - 6px)` }}
-          />
-        </div>
+            className="absolute inset-0 flex flex-col justify-end transition-opacity duration-300"
+            style={{ opacity: showCtrl ? 1 : 0, pointerEvents: showCtrl ? "auto" : "none",
+              background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 40%, transparent 70%)" }}
+          >
+            {/* title top */}
+            <div className="absolute top-0 left-0 right-0 px-4 pt-3 pb-6"
+              style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)" }}>
+              <p className="text-white text-sm font-bold truncate">{title}</p>
+            </div>
 
-        {/* bottom row */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          {url ? (
-            <a
-              href={url}
-              download
-              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-lg text-white hover:bg-white/10 transition"
-              style={{ border: "1px solid rgba(255,255,255,0.2)" }}
-            >
-              <IcoDownload /> تحميل التسجيل
-            </a>
-          ) : (
-            <span className="text-[11px] text-white/40">لا يوجد تسجيل</span>
-          )}
-          <span className="text-[11px] text-white/50 font-mono tabular-nums">
-            {fmt(current)} / {displayDuration}
-          </span>
-        </div>
+            {/* bottom controls */}
+            <div className="px-3 pb-3 space-y-1.5">
+              {/* seek bar */}
+              <div
+                className="relative w-full group/seek cursor-pointer"
+                style={{ height: 18, display: "flex", alignItems: "center" }}
+                onClick={seek}
+              >
+                <div className="w-full rounded-full transition-all"
+                  style={{ height: showCtrl ? 4 : 2, background: "rgba(255,255,255,0.25)" }}>
+                  {/* buffered placeholder */}
+                  <div className="h-full rounded-full" style={{ width: `${Math.min(pct + 15, 100)}%`, background: "rgba(255,255,255,0.2)" }} />
+                  {/* played */}
+                  <div className="h-full rounded-full -mt-full transition-all"
+                    style={{ width: `${pct}%`, background: "#5AEACF", marginTop: "-100%" }} />
+                </div>
+                {/* thumb */}
+                <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-md opacity-0 group-hover/seek:opacity-100 transition-opacity"
+                  style={{ left: `calc(${pct}% - 7px)` }} />
+              </div>
+
+              {/* buttons row */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {/* fullscreen */}
+                  <button onClick={toggleFullscreen}
+                    className="text-white/80 hover:text-white transition p-1 rounded"
+                    title={fullscr ? "خروج من وضع ملء الشاشة" : "ملء الشاشة"}>
+                    {fullscr ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+                        <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+                        <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+                      </svg>
+                    )}
+                  </button>
+
+                  {/* download */}
+                  {url && (
+                    <a href={url} download
+                      className="text-white/80 hover:text-white transition p-1 rounded"
+                      title="تحميل">
+                      <IcoDownload/>
+                    </a>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* time */}
+                  <span className="text-white/70 text-[11px] font-mono tabular-nums">
+                    {fmt(current)} / {displayDuration}
+                  </span>
+
+                  {/* volume */}
+                  <div className="flex items-center gap-1.5 group/vol">
+                    <button onClick={toggleMute} className="text-white/80 hover:text-white transition p-1">
+                      <VolumeIcon/>
+                    </button>
+                    <input
+                      type="range" min="0" max="1" step="0.05"
+                      value={muted ? 0 : volume}
+                      onChange={changeVolume}
+                      className="w-0 group-hover/vol:w-16 transition-all duration-200 accent-[#5AEACF] cursor-pointer"
+                      style={{ height: 3 }}
+                    />
+                  </div>
+
+                  {/* play/pause */}
+                  <button onClick={toggle}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white hover:scale-110 transition"
+                    style={{ background: "#5AEACF" }}>
+                    {playing ? (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+                      </svg>
+                    ) : (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#0d1b2e" stroke="none">
+                        <polygon points="6 3 20 12 6 21 6 3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -522,6 +621,15 @@ export default function UserSessionViewPage({ session: sessionProp, sessionId: s
     timeTo: s?.ends_at ?? sessionProp?.timeTo,
   }) || sessionProp?.status === "completed" || sessionProp?.status === "ended";
 
+  // جلسة مسجلة (recorded) → الفيديو متاح دايماً بغض النظر عن الوقت
+  const sessionTypeRaw = s?.type ?? sessionProp?.type;
+  const isRecorded = (() => {
+    if (!sessionTypeRaw && sessionTypeRaw !== 0) return false;
+    if (typeof sessionTypeRaw === "object") return sessionTypeRaw?.value === 1 || sessionTypeRaw?.text === "recorded";
+    return Number(sessionTypeRaw) === 1 || String(sessionTypeRaw).toLowerCase() === "recorded";
+  })();
+  const canShowVideo = sessionEnded || isRecorded;
+
   const files = collectSessionFiles(s);
 
   // ── sibling status helper ─────────────────────────────────────────────────
@@ -639,7 +747,7 @@ export default function UserSessionViewPage({ session: sessionProp, sessionId: s
                   </span>
                 </div>
 
-                {sessionEnded && videoUrl ? (
+                {canShowVideo && videoUrl ? (
                   <div ref={playerWrapRef} style={{ borderRadius: 12, overflow: "hidden" }}>
                     <VideoPlayer
                       key={s?.id ?? videoUrl}
@@ -655,7 +763,7 @@ export default function UserSessionViewPage({ session: sessionProp, sessionId: s
                     className="rounded-xl px-4 py-8 text-center text-[13px] text-slate-500"
                     style={{ background: "#F2F5F8" }}
                   >
-                    {sessionEnded
+                    {canShowVideo
                       ? "لا يوجد تسجيل فيديو لهذه الجلسة"
                       : "سيظهر تسجيل الجلسة هنا بعد انتهائها"}
                   </div>

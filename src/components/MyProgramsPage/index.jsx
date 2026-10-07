@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { fetchMyEnrollments, fetchMyBrowsePrograms, fetchMyEnrollmentDetail, fetchMySessions, fetchMyProgramDetail, addMyFavourite, removeMyFavourite } from "../../services/api";
 import { getUser } from "../../services/auth";
 import { useFavStore, setFav, seedFavs } from "../../services/favourites";
@@ -581,10 +582,30 @@ function SectionHeader({ title, count }) {
 
 // ── main ──────────────────────────────────────────────────────────────────────
 export default function MyProgramsPage({ onViewProgram, onViewProgress, onViewSession }) {
+  const location = useLocation();
+  const targetSection = location.state?.section ?? null; // "continue" | "enrolled" | null
+
+  // section refs for scroll-into-view
+  const continueRef = useRef(null);
+  const enrolledRef = useRef(null);
   // ── my programs state ──
   const [enrolled,  setEnrolled]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [continueLoading, setContinueLoading] = useState(null);
+
+  // auto-scroll to target section once data loads
+  useEffect(() => {
+    if (loading) return;
+    if (!targetSection) return;
+    const refMap = { continue: continueRef, enrolled: enrolledRef };
+    const ref = refMap[targetSection];
+    if (!ref?.current) return;
+    // small delay so the DOM has rendered
+    const timer = setTimeout(() => {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [loading, targetSection]);
 
   // ── browse state ──
   const [bSearch,   setBSearch]   = useState("");
@@ -615,15 +636,16 @@ export default function MyProgramsPage({ onViewProgram, onViewProgress, onViewSe
         fetchEnrollmentDetail: fetchMyEnrollmentDetail,
         fetchSessions: fetchMySessions,
       });
-      if (next?.id && onViewSession) {
+      if (next?.id) {
         markAutoplaySession(next.id);
-        onViewSession({ id: next.id, sessionId: next.id, rawId: next.id, title: next.title ?? prog.title });
+        // افتح صفحة البرنامج مع auto-open على الجلسة الصح
+        onViewProgram?.({ ...prog, programId: pid, id: pid, autoOpenSessionId: next.id });
       } else {
         onViewProgram?.(prog);
       }
     } catch { onViewProgram?.(prog); }
     finally { setContinueLoading(null); }
-  }, [onViewSession, onViewProgram]);
+  }, [onViewProgram]);
 
   // ── fetch enrolled ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -789,7 +811,7 @@ export default function MyProgramsPage({ onViewProgram, onViewProgress, onViewSe
 
         {/* ══ section 1: استكمال المشاهدة — أول جزء في الصفحة ══ */}
         {!loading && enrolled.filter(p => (p.progress ?? 0) > 0 || getLastWatchForProgram(p.programId)).length > 0 && (
-          <div>
+          <div ref={continueRef} style={{ scrollMarginTop: 16 }}>
             <SectionHeader title="استكمال المشاهدة"/>
             <Carousel gap={14}>
               {enrolled.filter(p => (p.progress ?? 0) > 0 || getLastWatchForProgram(p.programId)).map(p => (
@@ -805,7 +827,7 @@ export default function MyProgramsPage({ onViewProgram, onViewProgress, onViewSe
         )}
 
         {/* ══ section 2: برامجي المسجلة ══ */}
-        <div>
+        <div ref={enrolledRef} style={{ scrollMarginTop: 16 }}>
           <SectionHeader title="برامجي المسجلة" count={!loading ? enrolled.length : undefined}/>
           {loading ? (
             <Carousel gap={16}>

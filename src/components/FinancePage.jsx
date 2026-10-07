@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 import { fetchFinancials } from "../services/api";
+import { DONUT_COLORS, BRAND, TEAL, TEAL_LIGHT, AMBER, PINK, ORANGE } from "../constants/colors";
 
 // ── period tab → API param ────────────────────────────────────────────────────
 const PERIOD_TABS = [
@@ -14,11 +15,11 @@ const PERIOD_TABS = [
   { label: "مخصص",         key: "custom"     },
 ];
 
-// ── donut colour palette (API has no colours) ─────────────────────────────────
-const DONUT_COLORS = ["#0ABFBF", "#024677", "#5AEACF", "#f59e0b", "#e879f9", "#fb923c"];
+// ── finance donut uses a slightly different order — override locally ───────────
+const FINANCE_DONUT_COLORS = [TEAL, BRAND, TEAL_LIGHT, AMBER, PINK, ORANGE];
 
 // ── stats colours ─────────────────────────────────────────────────────────────
-const STAT_COLORS = ["#0ABFBF", "#024677", "#5AEACF", "#f59e0b"];
+const STAT_COLORS = [TEAL, BRAND, TEAL_LIGHT, AMBER];
 
 // ── number formatter ──────────────────────────────────────────────────────────
 function fmt(n) {
@@ -233,7 +234,7 @@ export default function FinancePage() {
   const donutData     = (data?.revenue_by_field ?? []).map((f, i) => ({
     name:  f.field_name,
     value: f.percent,
-    color: DONUT_COLORS[i % DONUT_COLORS.length],
+    color: FINANCE_DONUT_COLORS[i % FINANCE_DONUT_COLORS.length],
   }));
   const programsData  = (data?.programs_revenue ?? []).map(p => ({
     name:    p.program_name,

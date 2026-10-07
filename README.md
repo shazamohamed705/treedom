@@ -1,16 +1,124 @@
-# React + Vite
+# Treedom — Training Management Platform
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+منصة إدارة التدريب المؤسسي، تربط بين هيئات التدريب والشركات والمدربين والمتدربين في مكان واحد.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## المحتويات
 
-## React Compiler
+- [نظرة عامة](#نظرة-عامة)
+- [المتطلبات](#المتطلبات)
+- [التشغيل المحلي](#التشغيل-المحلي)
+- [هيكل المشروع](#هيكل-المشروع)
+- [الأدوار](#الأدوار)
+- [المتغيرات البيئية](#المتغيرات-البيئية)
+- [البناء للإنتاج](#البناء-للإنتاج)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## نظرة عامة
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Treedom هي واجهة أمامية (Frontend) مبنية بـ **React 19 + Vite + Tailwind CSS**، تتواصل مع Backend API لإدارة:
+
+- البرامج التدريبية والجلسات
+- التقييمات والاختبارات والتصحيح
+- إدارة الموظفين والمتدربين والمدربين
+- المدفوعات والفواتير وطلبات التمويل
+- الإشعارات وسجلات النشاط
+
+---
+
+## المتطلبات
+
+| الأداة | الإصدار المطلوب |
+|--------|-----------------|
+| Node.js | >= 18.x |
+| npm | >= 9.x |
+
+---
+
+## التشغيل المحلي
+
+```bash
+# 1. تثبيت الحزم
+npm install
+
+# 2. إنشاء ملف المتغيرات البيئية
+cp .env.example .env.local
+# ثم عدّل VITE_API_BASE_URL بعنوان الـ API
+
+# 3. تشغيل السيرفر المحلي
+npm run dev
+```
+
+يفتح التطبيق على `http://localhost:5173` افتراضياً.
+
+---
+
+## هيكل المشروع
+
+```
+src/
+├── components/       # جميع صفحات ومكونات الواجهة
+│   ├── Dashboard/
+│   ├── LoginPage/
+│   ├── RegisterPage/
+│   ├── UserDashboard/
+│   ├── TrainerDashboardPage/
+│   ├── CompanyDashboard/
+│   └── ...
+├── context/          # React Context (إشعارات، وضع الكويز)
+├── data/             # بيانات ثابتة / mock data
+├── hooks/            # Custom React hooks
+├── services/         # طبقة API والـ auth
+│   ├── api.js        # جميع طلبات HTTP
+│   ├── auth.js       # تسجيل الدخول والصلاحيات
+│   └── ...
+└── App.jsx           # الـ Router الرئيسي
+```
+
+---
+
+## الأدوار
+
+| الدور | الوصف |
+|-------|-------|
+| `org` | هيئة تدريب — صلاحيات كاملة |
+| `company` | شركة — إدارة موظفين وبرامج |
+| `trainer` | مدرب — إدارة برامجه وجلساته |
+| `employee` | موظف — يتابع برامجه التدريبية |
+| `user` | متدرب فردي — يتصفح ويلتحق بالبرامج |
+
+---
+
+## المتغيرات البيئية
+
+أنشئ ملف `.env.local` في root المشروع:
+
+```env
+VITE_API_BASE_URL=https://your-api-domain.com/api
+```
+
+> **تنبيه:** لا ترفع ملفات `.env` على GitHub أبداً — هي مضافة في `.gitignore`.
+
+---
+
+## البناء للإنتاج
+
+```bash
+npm run build
+```
+
+الناتج يكون في مجلد `dist/` جاهز للرفع على أي استضافة ثابتة (Vercel, Netlify, إلخ).
+
+---
+
+## التقنيات المستخدمة
+
+- [React 19](https://react.dev/)
+- [Vite 8](https://vite.dev/)
+- [Tailwind CSS 4](https://tailwindcss.com/)
+- [React Router v6](https://reactrouter.com/)
+- [Recharts](https://recharts.org/)
+- [jsPDF](https://github.com/parallax/jsPDF) + [html2canvas](https://html2canvas.hertzen.com/)
+- [SheetJS (xlsx)](https://sheetjs.com/)

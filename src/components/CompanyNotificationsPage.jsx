@@ -23,8 +23,8 @@ export default function CompanyNotificationsPage() {
   }, []);
 
   return (
-    <main className="flex-1 overflow-y-auto bg-white px-3 py-3" dir="rtl">
-      <div className="w-full max-w-[900px] mx-auto">
+    <main className="flex-1 overflow-y-auto bg-slate-50 px-4 py-5" dir="rtl">
+      <div className="w-full">
         <h1 className="text-lg font-bold text-slate-800 mb-5">الإشعارات</h1>
 
         <div className="bg-white rounded-2xl border border-slate-100 p-5">

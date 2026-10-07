@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+﻿import { useState, useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { isAuthenticated, getUserRole, roleToPreviewId, clearAuth, hasPermission, isIndeCoach } from "./services/auth";
 import { getAccessRole, canAccessDashboardPath } from "./services/routeAccess";
@@ -31,6 +31,7 @@ const ProgramViewPage        = lazy(() => import("./components/ProgramViewPage")
 const SessionsPage           = lazy(() => import("./components/SessionsPage"));
 const QuizzesPage            = lazy(() => import("./components/QuizzesPage"));
 const SessionViewPage        = lazy(() => import("./components/SessionViewPage"));
+const SessionAddContentPage  = lazy(() => import("./components/SessionEditPage"));
 const ReviewRequestsPage     = lazy(() => import("./components/ReviewRequestsPage"));
 const TodaySessionsPage      = lazy(() => import("./components/TodaySessionsPage"));
 const AddSessionPage         = lazy(() => import("./components/AddSessionPage"));
@@ -47,12 +48,18 @@ const TrainerSessionViewPage = lazy(() => import("./components/TrainerSessionVie
 const AddCoachSessionPage    = lazy(() => import("./components/AddCoachSessionPage"));
 const TrainerRequestsPage    = lazy(() => import("./components/TrainerRequestsPage"));
 const TrainerNotificationsPage = lazy(() => import("./components/TrainerNotificationsPage"));
+const AssessmentsPage        = lazy(() => import("./components/AssessmentsPage"));
+const TasksPage              = lazy(() => import("./components/TasksPage"));
+const GradingPage            = lazy(() => import("./components/GradingPage"));
 const CompanyNotificationsPage = lazy(() => import("./components/CompanyNotificationsPage"));
 const NotificationsPage      = lazy(() => import("./components/NotificationsPage"));
 const OrgActivityLogPage     = lazy(() => import("./components/OrgActivityLogPage"));
 const UserDashboardPage      = lazy(() => import("./components/UserDashboard"));
 const ProgramsBrowsePage     = lazy(() => import("./components/ProgramsBrowsePage"));
 const MyProgramsPage         = lazy(() => import("./components/MyProgramsPage"));
+const ContinueWatchingPage   = lazy(() => import("./components/ContinueWatchingPage"));
+const MyEnrolledProgramsPage = lazy(() => import("./components/MyEnrolledProgramsPage"));
+const SuggestedProgramsPage  = lazy(() => import("./components/SuggestedProgramsPage"));
 const UserProfilePage        = lazy(() => import("./components/UserProfilePage"));
 const TrainingRecordPage     = lazy(() => import("./components/TrainingRecordPage"));
 const FavoritesPage          = lazy(() => import("./components/FavoritesPage"));
@@ -348,6 +355,7 @@ const NAV_ALIASES = {
   "user-program-session": "my-programs",
   "session-view": "sessions",
   "session-edit": "sessions",
+  "session-add-content": "sessions",
   "add-session": "sessions",
   "view-program": "programs",
   "edit-program": "programs",
@@ -366,6 +374,9 @@ const NAV_ALIASES = {
   "settings-users": "settings",
   "settings-company": "settings",
   "activity-log": "",
+  "assessments": "assessments",
+  "tasks": "tasks",
+  "grading": "grading",
 };
 
 function dashboardSeg(pathname) {
@@ -518,7 +529,11 @@ function DashboardShell() {
   const setViewProgramId = (id) => { sessionStorage.setItem("viewProgramId", id ?? ""); setViewProgramIdRaw(id); };
   const setViewUserProgramId = (id) => { sessionStorage.setItem("viewUserProgramId", id ?? ""); setViewUserProgramIdRaw(id); };
   const setViewUserSessionId = (id) => { sessionStorage.setItem("viewUserSessionId", String(id ?? "")); setViewUserSessionIdRaw(id); };
+  const setViewUserSession   = (s)  => { try { sessionStorage.setItem("viewUserSession", s ? JSON.stringify(s) : ""); } catch {} };
+  const getViewUserSession   = ()   => { try { const r = sessionStorage.getItem("viewUserSession"); return r ? JSON.parse(r) : null; } catch { return null; } };
   const setViewSession   = (s)  => { sessionStorage.setItem("viewSession", s ? JSON.stringify(s) : ""); setViewSessionRaw(s); };
+  const [autoOpenSessionId, setAutoOpenSessionIdRaw] = useState(() => sessionStorage.getItem("autoOpenSessionId") ?? null);
+  const setAutoOpenSessionId = (id) => { sessionStorage.setItem("autoOpenSessionId", String(id ?? "")); setAutoOpenSessionIdRaw(id ?? null); };
 
   // For org/company, keep SYSTEMS switcher active; for other roles it's hidden
   const current = SYSTEMS[activeSystem];
@@ -526,12 +541,17 @@ function DashboardShell() {
   // ── nav items per role ─────────────────────────────────────────────────────
   const navForRole = (() => {
     if (isTrainer) return [
-      { label: "الصفحة الرئيسية", icon: "home"      },
+      { label: "الصفحة الرئيسية", icon: "home"        },
       ...(hasPermission("programs.view") ? [{ label: "برامجي", icon: "graduation" }] : []),
       ...(hasPermission("sessions.view")  ? [{ label: "جلساتي", icon: "calendar"  }] : []),
-      { label: "طلباتي",           icon: "review"    },
-      { label: "الإشعارات",        icon: "bell"      },
-      { label: "الملف الشخصي",     icon: "profile"   },
+      { label: "طلباتي",           icon: "review"      },
+      { label: "الإشعارات",        icon: "bell"        },
+      { label: "إدارة التقييمات والامتحانات", icon: "assessments", children: [
+        { label: "التقييمات وبنك الأسئلة",   path: "assessments" },
+        { label: "التاسكات والامتحانات",      path: "tasks"       },
+        { label: "إدارة التقييمات والتصحيح", path: "grading"     },
+      ]},
+      { label: "الملف الشخصي",     icon: "profile"     },
     ];
     if (isPending) return [
       { label: "الصفحة الرئيسية",   icon: "home"      },
@@ -581,12 +601,13 @@ function DashboardShell() {
   const pathFor = (i) => {
     if (isTrainer) {
       const TRAINER_ICON_PATH = {
-        home:       "",
-        graduation: "trainer-programs",
-        calendar:   "trainer-sessions",
-        review:     "trainer-requests",
-        bell:       "notifications",
-        profile:    "profile",
+        home:        "",
+        graduation:  "trainer-programs",
+        calendar:    "trainer-sessions",
+        review:      "trainer-requests",
+        bell:        "notifications",
+        assessments: "",
+        profile:     "profile",
       };
       return TRAINER_ICON_PATH[navForRole[i]?.icon] ?? "";
     }
@@ -603,7 +624,7 @@ function DashboardShell() {
       const userPaths = ["", "programs", "my-programs", "sessions", "training-record", "favorites", "", "notifications", "support", "user-profile"];
       return userPaths[i] ?? "";
     }
-    const orgPaths = ["dashboard", "programs", "sessions", "quizzes", "today-sessions", "trainers", "trainees", "attendance", "review", "finance", "settings"];
+    const orgPaths = ["dashboard", "programs", "sessions", "", "today-sessions", "trainers", "trainees", "attendance", "review", "finance", "settings"];
     const companyPaths = ["dashboard", "programs", "negotiation-requests", "employee-programs", "employees", "company-payments", "settings"];
     const list = current.id === "company"
       ? companyPaths
@@ -677,8 +698,8 @@ function DashboardShell() {
     if (isTrainer || isPending) return (
       <TrainerDashboardPage onViewSession={(s) => { setTrainerSessionId(s.id); navigate("/dashboard/trainer-session-view"); }} onAddProgram={() => navigate("/dashboard/coach-add-program")} />
     );
-    if (isEmployee) return <UserDashboardPage role="employee" onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); navigate("/dashboard/user-program-view"); }} onViewSession={(s) => { setViewUserSessionId(s.sessionId ?? s.id); navigate("/dashboard/user-session-view"); }} />;
-    if (isUser)     return <UserDashboardPage role="user" onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); navigate("/dashboard/user-program-view"); }} onViewSession={(s) => { setViewUserSessionId(s.sessionId ?? s.id); navigate("/dashboard/user-session-view"); }} />;
+    if (isEmployee) return <UserDashboardPage role="employee" onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); setAutoOpenSessionId(p.autoOpenSessionId ?? null); navigate("/dashboard/user-program-view"); }} onViewSession={(s) => { setViewUserSessionId(s.sessionId ?? s.id); setViewUserSession(s); navigate("/dashboard/user-session-view"); }} />;
+    if (isUser)     return <UserDashboardPage role="user"     onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); setAutoOpenSessionId(p.autoOpenSessionId ?? null); navigate("/dashboard/user-program-view"); }} onViewSession={(s) => { setViewUserSessionId(s.sessionId ?? s.id); setViewUserSession(s); navigate("/dashboard/user-session-view"); }} />;
     // org / company → show org dashboard (company gets its own branded home)
     if (current.id === "company") return <CompanyDashboard data={current.data} onViewProgram={(p) => { setViewDetailProgram(p); navigate("/dashboard/program-detail"); }} />;
     return <Dashboard onAddTrainer={() => navigate("/dashboard/add-trainer")} onAddProgram={() => navigate("/dashboard/add-program")} onGoNotifications={() => navigate("/dashboard/activity-log")} onViewSession={(s) => { setViewSession(s); navigate("/dashboard/session-view"); }} />;
@@ -702,6 +723,7 @@ function DashboardShell() {
             navigate("/dashboard/settings");
           }}
           activeSettingsChild={settingsSub}
+          activeChildPath={dashboardSeg(location.pathname)}
           onChildNav={(path) => {
             const idx = navForRole.findIndex(it => it.children?.some(c => c.path === path));
             if (idx >= 0) setActiveNav(idx);
@@ -776,6 +798,9 @@ function DashboardShell() {
             <Route path="trainer-add-session"   element={<AddCoachSessionPage onBack={() => navigate("/dashboard/trainer-sessions")} />} />
             <Route path="trainer-session-view"  element={<TrainerSessionViewPage key={trainerSessionId} sessionId={trainerSessionId} onBack={() => navigate("/dashboard/trainer-sessions")} />} />
             <Route path="trainer-requests"      element={<TrainerRequestsPage />} />
+            <Route path="assessments"           element={<AssessmentsPage />} />
+            <Route path="tasks"                 element={<TasksPage />} />
+            <Route path="grading"               element={<GradingPage />} />
             <Route path="notifications"         element={
               isTrainer || isPending
                 ? <TrainerNotificationsPage />
@@ -798,8 +823,11 @@ function DashboardShell() {
                     />
                   : <ProgramsGrid onAddProgram={() => navigate("/dashboard/add-program")} onEditProgram={(p) => { setViewProgramId(p.id); navigate("/dashboard/view-program"); }} />
             } />
-            <Route path="my-programs"  element={<MyProgramsPage onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); navigate("/dashboard/user-program-view"); }} onViewSession={(s) => { setViewUserSessionId(s.id ?? s.sessionId); navigate("/dashboard/user-session-view"); }} />} />
-            <Route path="user-program-view"    element={<UserProgramViewPage programId={viewUserProgramId} onBack={() => navigate(-1)} onGoPayments={() => navigate("/dashboard/payments")} />} />
+            <Route path="my-programs"  element={<MyProgramsPage onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); setAutoOpenSessionId(p.autoOpenSessionId ?? null); navigate("/dashboard/user-program-view"); }} onViewSession={(s) => { setViewUserSessionId(s.id ?? s.sessionId); navigate("/dashboard/user-session-view"); }} />} />
+            <Route path="continue-watching"   element={<ContinueWatchingPage   role={isEmployee ? "employee" : "user"} onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); setAutoOpenSessionId(p.autoOpenSessionId ?? null); navigate("/dashboard/user-program-view"); }} onBack={() => navigate(-1)} />} />
+            <Route path="my-enrolled"         element={<MyEnrolledProgramsPage  role={isEmployee ? "employee" : "user"} onViewProgram={(p) => { setViewUserProgramId(p.programId ?? p.id ?? p); navigate("/dashboard/user-program-view"); }} onBack={() => navigate(-1)} />} />
+            <Route path="suggested-programs"  element={<SuggestedProgramsPage   onViewProgram={(p) => { setViewUserProgramId(p.id ?? p); navigate("/dashboard/user-program-view"); }} onBack={() => navigate(-1)} />} />
+            <Route path="user-program-view" element={<UserProgramViewPage programId={viewUserProgramId} autoOpenSessionId={autoOpenSessionId || null} onBack={() => { setAutoOpenSessionId(null); navigate(-1); }} onGoPayments={() => navigate("/dashboard/payments")} />} />
             <Route path="user-program-session" element={<UserProgramSessionPage onBack={() => navigate(-1)} onEnroll={() => navigate("/dashboard/user-program-view")} />} />
             <Route path="user-profile"     element={<UserProfilePage />} />
             <Route path="training-record"  element={<TrainingRecordPage />} />
@@ -811,10 +839,20 @@ function DashboardShell() {
               : <AddProgramPage onBack={() => navigate("/dashboard/programs")} />} />
             <Route path="edit-program" element={<EditProgramPage programId={viewProgramId} onBack={() => navigate("/dashboard/view-program")} />} />
             <Route path="view-program" element={<ProgramViewPage programId={viewProgramId} onBack={() => navigate("/dashboard/programs")} onEdit={(p) => { setViewProgramId(p?.id ?? viewProgramId); navigate("/dashboard/edit-program"); }} />} />
-            <Route path="sessions"     element={isUser || isEmployee ? <UserSessionsPage onViewSession={(s) => { setViewUserSessionId(s.id ?? s.sessionId); navigate("/dashboard/user-session-view"); }} /> : <SessionsPage onViewSession={(s) => { setViewSession(s); navigate("/dashboard/session-view"); }} onEditSession={(s) => { setEditSession(s); navigate("/dashboard/session-edit"); }} />} />
+            <Route path="sessions"     element={isUser || isEmployee ? <UserSessionsPage onViewSession={(s) => { setViewUserSessionId(s.id ?? s.sessionId); navigate("/dashboard/user-session-view"); }} /> : <SessionsPage onViewSession={(s) => { setViewSession(s); navigate("/dashboard/session-view"); }} onEditSession={(s) => { setEditSession(s); navigate("/dashboard/session-edit"); }} onAddContent={(s) => { setViewSession(s); try { sessionStorage.setItem("addContentSession", JSON.stringify(s)); } catch{} navigate("/dashboard/session-add-content"); }} />} />
             <Route path="quizzes"      element={<QuizzesPage />} />
-            <Route path="user-session-view" element={<UserSessionViewPage sessionId={viewUserSessionId} onBack={() => navigate("/dashboard/sessions")} />} />
+            <Route path="user-session-view" element={<UserSessionViewPage session={getViewUserSession()} sessionId={viewUserSessionId} onBack={() => navigate("/dashboard/sessions")} />} />
             <Route path="session-view" element={<SessionViewPage session={viewSession ?? {}} onBack={() => navigate("/dashboard/sessions")} />} />
+            <Route path="session-add-content" element={(() => {
+              const s = viewSession ?? (() => { try { return JSON.parse(sessionStorage.getItem("addContentSession") || "null"); } catch { return null; } })() ?? {};
+              return <SessionAddContentPage
+                lesson={{ name: s.title, date: s.date, time: s.timeFrom ?? s.starts_at, attachments: s.attachments ?? [], video: s.video ?? null }}
+                unitTitle={s.unit ?? s.program ?? ""}
+                programName={s.program ?? "إدارة الجلسات"}
+                onSave={() => { sessionStorage.removeItem("addContentSession"); navigate("/dashboard/sessions"); }}
+                onCancel={() => { sessionStorage.removeItem("addContentSession"); navigate("/dashboard/sessions"); }}
+              />;
+            })()} />
             <Route path="add-session"  element={<AddSessionPage onBack={() => navigate("/dashboard/sessions")} />} />
             <Route path="session-edit" element={<AddSessionPage session={editSession} onBack={() => navigate("/dashboard/sessions")} />} />
             <Route path="today-sessions" element={<TodaySessionsPage onViewSession={(s) => { setViewSession(s); navigate("/dashboard/session-view"); }} onEditSession={(s) => { setEditSession(s); navigate("/dashboard/session-edit"); }} />} />

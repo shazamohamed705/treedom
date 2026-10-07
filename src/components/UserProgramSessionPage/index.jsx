@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { checkInMySession, rememberSessionCheckIn } from "../../services/api";
 import { IcoChevL, IcoStar, IcoUsers, IcoFile, IcoClock, IcoFilter, IcoHeart } from "./icons";
 import VideoPlayer   from "./VideoPlayer";
@@ -76,8 +76,8 @@ export default function UserProgramSessionPage({ program, onBack, onEnroll, init
     { key: "recorded", label: "مسجّل" },
   ];
 
-  const playerRef = useRef(null); // ref للـ scroll
-  const [selectedSession, setSelected]        = useState(() => {
+  const playerRef = useRef(null);
+  const [selectedSession, setSelected] = useState(() => {
     if (!(p?.isEnrolled ?? false)) return null;
     if (initialSessionId != null) {
       const hit = curriculum.find(s => String(s.id) === String(initialSessionId) || String(s.sessionId) === String(initialSessionId));
@@ -85,7 +85,21 @@ export default function UserProgramSessionPage({ program, onBack, onEnroll, init
     }
     return curriculum.find(s => s.videoUrl) ?? curriculum[0] ?? null;
   });
-  const [videoKey,        setVideoKey]        = useState(0);   // increment → يعيد mount الـ VideoPlayer
+  const [videoKey, setVideoKey] = useState(0);
+
+  // sync when initialSessionId prop changes (e.g. same component, new continue session)
+  useEffect(() => {
+    if (initialSessionId == null) return;
+    if (!isEnrolled) return;
+    const hit = curriculum.find(
+      s => String(s.id) === String(initialSessionId) || String(s.sessionId) === String(initialSessionId)
+    );
+    if (!hit) return;
+    setSelected(hit);
+    setVideoKey(k => k + 1);
+    setTimeout(() => playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSessionId]);
   const [wishlisted,      setWishlisted]      = useState(() => p?.isFavourite ?? false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [joinBusy,        setJoinBusy]        = useState(null);
@@ -96,9 +110,13 @@ export default function UserProgramSessionPage({ program, onBack, onEnroll, init
   // يفتح الفيديو + يعمل scroll للـ player — للمشترك فقط
   const selectSession = (s) => {
     if (!isEnrolled) { askEnroll(); return; }
+    const isSame = selectedSession &&
+      (String(selectedSession.id) === String(s.id) ||
+       String(selectedSession.sessionId) === String(s.sessionId));
     setSelected(s);
     if (!visibleSessionVideo(s)) return;
-    setVideoKey(k => k + 1); // reset الفيديو من الأول
+    // reset الفيديو بس لو جلسة مختلفة — نفس الجلسة ما نعملش remount
+    if (!isSame) setVideoKey(k => k + 1);
     setTimeout(() => {
       playerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);

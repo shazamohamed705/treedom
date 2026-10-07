@@ -4,33 +4,14 @@ import { IconSearch, IconBell, IconMenu } from "./Icons";
 import { useNotifications, isUrgentSessionNotif } from "../context/NotificationContext";
 import { markNotificationRead, markAllNotificationsRead, globalSearchPrograms } from "../services/api";
 import { getUserRole, getUser, isIndeCoach } from "../services/auth";
+import { NOTIF_COLORS, TEAL } from "../constants/colors";
 
 // ── cycling constants — mirrors NotifFeed ─────────────────────────────────────
 const DROP_PAGE  = 4;   // items visible at once in the dropdown
 const CYCLE_MS   = 3200; // same as NotifFeed
 
-// ── type → color mapping (mirrors NotificationsPage) ─────────────────────────
-const DOT_COLOR = {
-  session_check_in: "#14b8a6",
-  session_reminder: "#dc2626",
-  session_notify:   "#dc2626",
-  session_started:  "#dc2626",
-  session_live:     "#dc2626",
-  program_enrolled: "#16a34a",
-  program_approved: "#16a34a",
-  program_rejected: "#dc2626",
-  request_approved: "#16a34a",
-  request_rejected: "#dc2626",
-  invoice_created:  "#7c3aed",
-  invoice_paid:     "#16a34a",
-  invoice_overdue:  "#dc2626",
-  warning:          "#d97706",
-  info:             "#14b8a6",
-  reminder:         "#3b82f6",
-  success:          "#16a34a",
-  error:            "#dc2626",
-};
-function dotColor(type) { return DOT_COLOR[type] ?? "#14b8a6"; }
+// ── type → color mapping — now from central colors file ──────────────────────
+function dotColor(type) { return NOTIF_COLORS[type] ?? TEAL; }
 
 // ── mini bell icon (inline, no external dep) ──────────────────────────────────
 function BellSvg({ size = 18 }) {

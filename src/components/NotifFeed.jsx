@@ -1,30 +1,31 @@
 import { useState, useEffect, useRef } from "react";
+import { SUCCESS, TEAL, INFO, WARNING, ERROR, PURPLE } from "../constants/colors";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 4;
 const CYCLE_MS  = 3500;
 
-// ── dot color per notif type ──────────────────────────────────────────────────
+// ── dot color + bg per notif type ─────────────────────────────────────────────
 const TYPE_CFG = {
-  success:  { dot: "#16a34a", bg: "#f0fdf4" },
-  info:     { dot: "#14b8a6", bg: "#f0fdfa" },
-  reminder: { dot: "#3b82f6", bg: "#eff6ff" },
-  warning:  { dot: "#d97706", bg: "#fffbeb" },
-  error:    { dot: "#dc2626", bg: "#fef2f2" },
+  success:  { dot: SUCCESS, bg: "#f0fdf4" },
+  info:     { dot: TEAL,    bg: "#f0fdfa" },
+  reminder: { dot: INFO,    bg: "#eff6ff" },
+  warning:  { dot: WARNING, bg: "#fffbeb" },
+  error:    { dot: ERROR,   bg: "#fef2f2" },
   // API types
-  program:  { dot: "#16a34a", bg: "#f0fdf4" },
-  session:  { dot: "#14b8a6", bg: "#f0fdfa" },
-  coach:    { dot: "#3b82f6", bg: "#eff6ff" },
-  session_check_in: { dot: "#14b8a6", bg: "#f0fdfa" },
-  session_reminder: { dot: "#3b82f6", bg: "#eff6ff" },
-  program_enrolled: { dot: "#16a34a", bg: "#f0fdf4" },
-  program_approved: { dot: "#16a34a", bg: "#f0fdf4" },
-  program_rejected: { dot: "#dc2626", bg: "#fef2f2" },
-  request_approved: { dot: "#16a34a", bg: "#f0fdf4" },
-  request_rejected: { dot: "#dc2626", bg: "#fef2f2" },
-  invoice_created:  { dot: "#7c3aed", bg: "#f5f3ff" },
-  invoice_paid:     { dot: "#16a34a", bg: "#f0fdf4" },
-  invoice_overdue:  { dot: "#dc2626", bg: "#fef2f2" },
+  program:  { dot: SUCCESS, bg: "#f0fdf4" },
+  session:  { dot: TEAL,    bg: "#f0fdfa" },
+  coach:    { dot: INFO,    bg: "#eff6ff" },
+  session_check_in: { dot: TEAL,    bg: "#f0fdfa" },
+  session_reminder: { dot: INFO,    bg: "#eff6ff" },
+  program_enrolled: { dot: SUCCESS, bg: "#f0fdf4" },
+  program_approved: { dot: SUCCESS, bg: "#f0fdf4" },
+  program_rejected: { dot: ERROR,   bg: "#fef2f2" },
+  request_approved: { dot: SUCCESS, bg: "#f0fdf4" },
+  request_rejected: { dot: ERROR,   bg: "#fef2f2" },
+  invoice_created:  { dot: PURPLE,  bg: "#f5f3ff" },
+  invoice_paid:     { dot: SUCCESS, bg: "#f0fdf4" },
+  invoice_overdue:  { dot: ERROR,   bg: "#fef2f2" },
 };
 function cfg(type) { return TYPE_CFG[type] ?? TYPE_CFG.info; }
 

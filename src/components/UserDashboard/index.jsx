@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   fetchTraineePrograms,
   fetchTraineeEnrollments,
@@ -23,6 +24,7 @@ import {
   resolveProgramId,
   getProgramLocalPercent,
   getLastWatchForProgram,
+  getContinueSessionId,
   markAutoplaySession,
 } from "../../services/watchProgress";
 
@@ -45,6 +47,7 @@ import {
 
 export default function UserDashboardPage({ role = "user", onViewProgram, onViewSession }) {
   const isEmployee = role === "employee";
+  const navigate   = useNavigate();
 
   // derive userType from stored auth for conditional card rendering
   const userType = (() => {
@@ -71,6 +74,22 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
   const [favBusy, setFavBusy] = useState(false);
   const [continueLoading, setContinueLoading] = useState(false);
 
+  // لما فيديو يخلص أو يتحدث → اعمل re-filter للـ continuePrograms
+  useEffect(() => {
+    const handler = (e) => {
+      const { programId, completed } = e.detail ?? {};
+      if (!completed) return; // بس لو اكتمل
+      const pid = String(programId ?? "");
+      if (!pid) return;
+      // لو مفيش جلسة ناقصة تانية → اشيل الكارت فوراً
+      if (!getContinueSessionId(pid)) {
+        setContinuePrograms(prev => prev.filter(p => String(p.programId) !== pid));
+      }
+    };
+    window.addEventListener("treedom:watch", handler);
+    return () => window.removeEventListener("treedom:watch", handler);
+  }, []);
+
   // helper: pick endpoint based on role
   const doFetchEnrollments  = (p) => isEmployee ? fetchMyEnrollments(p)         : fetchTraineeEnrollments(p);
   const doFetchSessions     = (p) => isEmployee ? fetchEmployeeSessions(p)      : fetchTraineeSessions(p);
@@ -80,7 +99,7 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
   const doRemoveFav         = (id) => removeMyFavourite(id);
   const doEnrollmentDetail  = (id) => isEmployee ? fetchEmployeeEnrollmentDetail(id) : fetchTraineeEnrollmentDetail(id);
 
-  // ── استكمال المشاهدة: افتح الفيديو نفسه (محلي أولاً، بعدين الـ API) ────
+  // ── استكمال المشاهدة: افتح صفحة تفاصيل البرنامج مع auto-open على الجلسة ──
   const handleContinue = useCallback(async (prog) => {
     const pid = resolveProgramId(prog);
     if (!pid) return;
@@ -92,11 +111,12 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
       });
       if (next?.id) {
         markAutoplaySession(next.id);
-        onViewSession?.({
-          id:         next.id,
-          sessionId:  next.id,
-          rawId:      next.id,
-          title:      next.title ?? prog.title ?? "",
+        // روح لصفحة تفاصيل البرنامج مع فتح الجلسة مباشرة
+        onViewProgram?.({
+          ...prog,
+          programId:         pid,
+          id:                pid,
+          autoOpenSessionId: next.id,
         });
       } else {
         onViewProgram?.(prog);
@@ -107,7 +127,7 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
       setContinueLoading(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onViewSession, onViewProgram, isEmployee]);
+  }, [onViewProgram, isEmployee]);
 
   // ── toggle favourite ────────────────────────────────────────────────────────
   const toggleFav = async (p) => {
@@ -154,7 +174,7 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
         const applyEnrolled = (mapped) => {
           if (!on) return;
           setContinuePrograms(mapped.filter(p =>
-            (p.progress ?? 0) > 0 || Boolean(getLastWatchForProgram(p.programId))
+            Boolean(getContinueSessionId(p.programId))
           ));
           setMyPrograms(mapped);
         };
@@ -326,6 +346,7 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
                 title="استكمال المشاهدة"
                 onNext={() => continueApi?.scrollNext()}
                 onPrev={() => continueApi?.scrollPrev()}
+                onViewAll={() => navigate("/dashboard/continue-watching")}
               />
               <Carousel onApi={setContinueApi}>
                 {continuePrograms.map(p => (
@@ -381,6 +402,7 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
                 title="برامجي"
                 onNext={() => myProgramsApi?.scrollNext()}
                 onPrev={() => myProgramsApi?.scrollPrev()}
+                onViewAll={() => navigate("/dashboard/my-enrolled")}
               />
               <Carousel onApi={setMyProgramsApi}>
                 {myPrograms.map(p => (
@@ -397,6 +419,7 @@ export default function UserDashboardPage({ role = "user", onViewProgram, onView
                 title="برامج مقترحة"
                 onNext={() => suggestedApi?.scrollNext()}
                 onPrev={() => suggestedApi?.scrollPrev()}
+                onViewAll={() => navigate("/dashboard/suggested-programs")}
               />
               <Carousel onApi={setSuggestedApi}>
                 {suggestedPrograms.map(p => (

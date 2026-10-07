@@ -2,7 +2,22 @@
 
 @theme {
   --font-sans: "Cairo", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Brand palette (mirrors src/constants/colors.js) ── */
+  --color-brand:        #024677;
+  --color-teal:         #14b8a6;
+  --color-teal-light:   #5AEACF;
+
+  /* ── Semantic ── */
+  --color-success:      #16a34a;
+  --color-danger:       #dc2626;
+  --color-warning:      #d97706;
+  --color-info:         #3b82f6;
+
+  /* ── UI chrome ── */
   --color-brand-border: #CADAE8;
+  --color-brand-bg:     #0246770D;
+  --color-text-primary: #1D293D;
 }
 
 @keyframes spin {

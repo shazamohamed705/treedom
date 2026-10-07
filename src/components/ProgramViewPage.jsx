@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchProgram, fetchSessions } from "../services/api";
 import Pagination from "./Pagination";
+import { TrainingContentView } from "./TrainingContentPage";
 
 // ── program status map ────────────────────────────────────────────────────────
 const PROGRAM_STATUS = {
@@ -89,6 +90,9 @@ const IcoClockSm  = () => <Ico d={<><circle cx="12" cy="12" r="10"/><polyline po
 const IcoUsers2   = () => <Ico d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
 const IcoCheck    = () => <Ico stroke="#14b8a6" d={<polyline points="20 6 9 17 4 12"/>} />;
 const IcoX        = () => <Ico stroke="#cbd5e1" d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+const IcoBook     = () => <Ico size={15} d={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></>} />;
+const IcoInfo     = () => <Ico size={15} d={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+const IcoChevDown = ({ size = 13 }) => <Ico size={size} sw={2.5} d={<polyline points="6 9 12 15 18 9"/>} />;
 
 // ── donut ring ────────────────────────────────────────────────────────────────
 function DonutRing({ pct = 0, size = 64 }) {
@@ -164,51 +168,22 @@ function Checklist({ items = [], readiness }) {
 function SessionsAccordion({ sessions = [] }) {
   const [open, setOpen] = useState(false);
 
-  function typeLabel(raw) {
-    if (!raw) return "";
-    if (typeof raw === "object") return raw.text ?? "";
-    return ({ 0: "أونلاين (Zoom)", 1: "مسجلة", 2: "حضوري" })[raw] ?? "";
-  }
-
   return (
     <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden" dir="ltr">
       <button type="button" onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth="2" strokeLinecap="round"
-          className={`transition-transform duration-200 text-slate-400 ${open ? "rotate-180" : ""}`}>
+          style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>
           <polyline points="6 9 12 15 18 9"/>
         </svg>
         <span className="text-base font-bold" style={{ color: "#024677" }}>
-          المحتوى التدريبي ({sessions.length} جلسة)
+          المحتوى التدريبي
         </span>
       </button>
       {open && (
-        <div className="border-t border-slate-100">
-          {sessions.length === 0 ? (
-            <p className="text-sm text-slate-400 text-right px-5 py-4">لا توجد جلسات.</p>
-          ) : (
-            <div className="divide-y divide-slate-100">
-              {sessions.map((s, i) => (
-                <div key={s.id ?? i} className="px-5 py-3 flex items-center justify-between gap-3" dir="rtl">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      style={{ background: "#14b8a6" }}>{i + 1}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{s.title || "جلسة بدون عنوان"}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{typeLabel(s.type)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                      <p className="text-[11px] text-slate-400">{s.date ?? ""}</p>
-                    <p className="text-[11px] text-slate-400">
-                      {s.starts_at ?? ""}{s.ends_at ? ` — ${s.ends_at}` : ""}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="border-t border-slate-100 p-4" dir="rtl">
+          <TrainingContentView sessions={sessions} />
         </div>
       )}
     </div>
@@ -304,9 +279,9 @@ function SessionCard({ session, onView, onEdit }) {
 export default function ProgramViewPage({ programId, onBack, onEdit }) {
   const id = programId ?? sessionStorage.getItem("viewProgramId") ?? null;
 
-  const [program, setProgram] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [program,    setProgram]    = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [error,      setError]      = useState(null);
 
   useEffect(() => {
     if (!id) { setProgram(DEFAULT_PROGRAM); setLoading(false); return; }
@@ -318,8 +293,8 @@ export default function ProgramViewPage({ programId, onBack, onEdit }) {
       .finally(() => setLoading(false));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const statusVal = program?.status?.value ?? program?.status;
-  const statusCfg = PROGRAM_STATUS[statusVal] ?? PROGRAM_STATUS[0];
+  const statusVal   = program?.status?.value ?? program?.status;
+  const statusCfg   = PROGRAM_STATUS[statusVal] ?? PROGRAM_STATUS[0];
   const statusLabel = program?.status?.text ?? statusCfg.label;
 
   return (
@@ -378,92 +353,92 @@ export default function ProgramViewPage({ programId, onBack, onEdit }) {
             </div>
 
             {/* program details */}
-            <div className="max-w-5xl ml-auto">
-              <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 sm:p-8 space-y-5" dir="rtl">
-                <h2 className="text-xl sm:text-2xl font-extrabold" style={{ color: "#024677" }}>
-                  عن البرنامج
-                </h2>
+                <div className="max-w-5xl ml-auto">
+                  <div className="bg-white border-2 border-slate-200 rounded-2xl p-5 sm:p-8 space-y-5" dir="rtl">
+                    <h2 className="text-xl sm:text-2xl font-extrabold" style={{ color: "#024677" }}>
+                      عن البرنامج
+                    </h2>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
-                  {[
-                    { label: "اسم البرنامج",           value: typeof program.name === "object" ? (program.name?.ar ?? program.name?.en) : program.name },
-                    { label: "المدرب المسؤول",          value: typeof program.trainer === "object" ? (program.trainer?.name ?? "—") : (program.trainer ?? "—") },
-                    { label: "تاريخ البدء",              value: program.start_date },
-                    { label: "تاريخ الانتهاء",           value: program.end_date },
-                    { label: "آخر موعد للتسجيل",        value: program.registration_deadline },
-                    { label: "عدد الجلسات المخططة",     value: program.sessions_count_planned },
-                    { label: "عدد الساعات",              value: program.hours_count != null ? `${program.hours_count} ساعة` : null },
-                    { label: "السعر",                    value: program.price_amount ? `${parseFloat(program.price_amount)} ${program.currency ?? ""}`.trim() : null },
-                    { label: "نوع المحتوى",              value: program.content_type?.text },
-                    { label: "نوع الجلسة",               value: program.session_type?.text },
-                    { label: "التصنيف",                  value: program.category?.name },
-                    { label: "المجال",                   value: program.field?.name },
-                    { label: "الطاقة الاستيعابية",       value: program.capacity_label ?? program.max_capacity },
-                    { label: "حالة النشاط",              value: program.activity_status?.text },
-                    { label: "مدة البرنامج",             value: program.duration_weeks != null ? `${program.duration_weeks} أسبوع` : null },
-                  ].filter(item => item.value != null && item.value !== "").map(item => (
-                    <div key={item.label}>
-                      <p className="text-xs text-slate-400 mb-1">{item.label}</p>
-                      <p className="text-sm font-semibold text-slate-800">{item.value}</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-right">
+                      {[
+                        { label: "اسم البرنامج",           value: typeof program.name === "object" ? (program.name?.ar ?? program.name?.en) : program.name },
+                        { label: "المدرب المسؤول",          value: typeof program.trainer === "object" ? (program.trainer?.name ?? "—") : (program.trainer ?? "—") },
+                        { label: "تاريخ البدء",              value: program.start_date },
+                        { label: "تاريخ الانتهاء",           value: program.end_date },
+                        { label: "آخر موعد للتسجيل",        value: program.registration_deadline },
+                        { label: "عدد الجلسات المخططة",     value: program.sessions_count_planned },
+                        { label: "عدد الساعات",              value: program.hours_count != null ? `${program.hours_count} ساعة` : null },
+                        { label: "السعر",                    value: program.price_amount ? `${parseFloat(program.price_amount)} ${program.currency ?? ""}`.trim() : null },
+                        { label: "نوع المحتوى",              value: program.content_type?.text },
+                        { label: "نوع الجلسة",               value: program.session_type?.text },
+                        { label: "التصنيف",                  value: program.category?.name },
+                        { label: "المجال",                   value: program.field?.name },
+                        { label: "الطاقة الاستيعابية",       value: program.capacity_label ?? program.max_capacity },
+                        { label: "حالة النشاط",              value: program.activity_status?.text },
+                        { label: "مدة البرنامج",             value: program.duration_weeks != null ? `${program.duration_weeks} أسبوع` : null },
+                      ].filter(item => item.value != null && item.value !== "").map(item => (
+                        <div key={item.label}>
+                          <p className="text-xs text-slate-400 mb-1">{item.label}</p>
+                          <p className="text-sm font-semibold text-slate-800">{item.value}</p>
+                        </div>
+                      ))}
+
+                      <div>
+                        <p className="text-xs text-slate-400 mb-1">حالة البرنامج</p>
+                        <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-lg"
+                          style={{ background: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.border}` }}>
+                          {statusLabel}
+                        </span>
+                      </div>
                     </div>
-                  ))}
 
-                  <div>
-                    <p className="text-xs text-slate-400 mb-1">حالة البرنامج</p>
-                    <span className="inline-block text-xs font-semibold px-2.5 py-1 rounded-lg"
-                      style={{ background: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.border}` }}>
-                      {statusLabel}
-                    </span>
+                    {/* description */}
+                    {program.description && (
+                      <div>
+                        <p className="text-xs text-slate-400 mb-2">وصف البرنامج</p>
+                        <p className="text-sm text-slate-700 leading-relaxed">
+                          {typeof program.description === "object"
+                            ? (program.description?.ar ?? program.description?.en ?? "")
+                            : program.description}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* keywords */}
+                    {program.keywords?.length > 0 && (
+                      <div>
+                        <p className="text-xs text-slate-400 mb-2">الكلمات المفتاحية</p>
+                        <div className="flex flex-wrap gap-2">
+                          {program.keywords.map(kw => (
+                            <span key={kw.id}
+                              className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                              style={{ background: "#E6F0F8", color: "#024677" }}>
+                              {kw.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* description */}
-                {program.description && (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-2">وصف البرنامج</p>
-                    <p className="text-sm text-slate-700 leading-relaxed">
-                      {typeof program.description === "object"
-                        ? (program.description?.ar ?? program.description?.en ?? "")
-                        : program.description}
-                    </p>
+                {program.checklist?.length > 0 && (
+                  <div className="max-w-5xl ml-auto">
+                    <Checklist items={program.checklist} readiness={program.readiness} />
                   </div>
                 )}
 
-                {/* keywords */}
-                {program.keywords?.length > 0 && (
-                  <div>
-                    <p className="text-xs text-slate-400 mb-2">الكلمات المفتاحية</p>
-                    <div className="flex flex-wrap gap-2">
-                      {program.keywords.map(kw => (
-                        <span key={kw.id}
-                          className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                          style={{ background: "#E6F0F8", color: "#024677" }}>
-                          {kw.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+                {/* sessions accordion — same style as TrainerProgramViewPage */}
+                <div className="max-w-5xl ml-auto">
+                  <SessionsAccordion sessions={program.sessions ?? []} />
+                </div>
 
-            {program.checklist?.length > 0 && (
-              <div className="max-w-5xl ml-auto">
-                <Checklist items={program.checklist} readiness={program.readiness} />
-              </div>
-            )}
-
-            {/* sessions accordion */}
-            <div className="max-w-5xl ml-auto">
-              <SessionsAccordion sessions={program.sessions ?? []} />
-            </div>
-
-            {/* edit button */}
-            <button onClick={() => onEdit?.(program)}
-              className="block w-full max-w-5xl ml-auto py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
-              style={{ background: "#024677" }}>
-              تعديل البرنامج
-            </button>
+                {/* edit button */}
+                <button onClick={() => onEdit?.(program)}
+                  className="block w-full max-w-5xl ml-auto py-3.5 rounded-xl text-sm font-bold text-white transition hover:opacity-90"
+                  style={{ background: "#024677" }}>
+                  تعديل البرنامج
+                </button>
           </>
         )}
       </div>

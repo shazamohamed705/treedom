@@ -332,7 +332,7 @@ function UpcomingCard({ session: s, onView, onEdit }) {
 }
 
 // ── Session row (list) ────────────────────────────────────────────────────────
-function SessionRow({ session: s, onView, onEdit }) {
+function SessionRow({ session: s, onView, onEdit, onAddContent }) {
   const isLive  = s.status === "live";
   const isEnded = s.status === "ended";
   const key = sessionTypeUiKey(s.type);
@@ -379,6 +379,17 @@ function SessionRow({ session: s, onView, onEdit }) {
               <IcoPlay />{isLive ? "الدخول إلى الجلسة" : "عرض"}
             </button>
           )}
+          {/* زرار إضافة محتوى — يظهر فقط لو انتهت الجلسة ومفيهاش تسجيل */}
+          {isEnded && !s.hasRecording && onAddContent && (
+            <button onClick={() => onAddContent(s)}
+              className="flex items-center gap-1.5 text-xs font-bold text-white px-4 h-[32px] rounded-lg hover:opacity-90 transition"
+              style={{ background: "#024677" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              إضافة محتوى
+            </button>
+          )}
           {onEdit && (
             <button onClick={() => onEdit?.(s)}
               className="flex items-center gap-1.5 text-xs font-bold text-[#024677] px-4 h-[32px] rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition">
@@ -392,7 +403,7 @@ function SessionRow({ session: s, onView, onEdit }) {
 }
 
 // ── main ──────────────────────────────────────────────────────────────────────
-export default function SessionsPage({ onViewSession, onEditSession }) {
+export default function SessionsPage({ onViewSession, onEditSession, onAddContent }) {
   const navigate = useNavigate();
 
   const [search,       setSearch]       = useState("");
@@ -754,6 +765,7 @@ export default function SessionsPage({ onViewSession, onEditSession }) {
           {!loading && visibleSessions.map(s => (
             <SessionRow key={s.id} session={s}
               onView={() => onViewSession?.(s)}
+              onAddContent={onAddContent ? () => onAddContent(s) : undefined}
               onEdit={() => onEditSession?.(s)} />
           ))}
           {!loading && visibleSessions.length === 0 && (

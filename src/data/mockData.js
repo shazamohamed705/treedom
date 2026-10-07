@@ -1,4 +1,5 @@
 // ===== Treedom Training Authority Data =====
+// chartColor values reference src/constants/colors.js CHART_COLORS
 export const treedomData = {
   systemName: "نظام التدريب",
   orgName: "هيئة تريب واو",
@@ -71,7 +72,11 @@ export const treedomData = {
     { label: "الصفحة الرئيسية",       icon: "home"       },
     { label: "البرامج التدريبية",      icon: "graduation"  },
     { label: "إدارة الجلسات",         icon: "calendar"    },
-    { label: "الاختبارات",            icon: "quiz"        },
+    { label: "إدارة التقييمات والامتحانات", icon: "assessments", children: [
+      { label: "التقييمات وبنك الأسئلة",  path: "assessments"       },
+      { label: "التاسكات والامتحانات",     path: "tasks"             },
+      { label: "إدارة التقييمات والتصحيح", path: "grading"           },
+    ]},
     { label: "جلسات اليوم",           icon: "clock"       },
     { label: "إدارة المدربين",        icon: "users"       },
     { label: "إدارة المتدربين",       icon: "users"       },

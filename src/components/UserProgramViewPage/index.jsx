@@ -34,11 +34,19 @@ import { MOCK_VIEW_PROGRAM as MOCK } from "../UserProgramSessionPage/mockData";
 import { previewSessionVideo, visibleSessionVideo } from "../UserProgramSessionPage/sessionHelpers";
 
 // ── main page ─────────────────────────────────────────────────────────────────
-export default function UserProgramViewPage({ program, programId, onBack, onEnroll, onGoPayments }) {
+export default function UserProgramViewPage({ program, programId, autoOpenSessionId, onBack, onEnroll, onGoPayments }) {
   const [apiProgram, setApiProgram] = useState(null);
   const [loading,    setLoading]    = useState(!!programId);
-  const [showSessions,       setShowSessions]       = useState(!!(program?.autoOpenSessions));
-  const [openSessionId,      setOpenSessionId]      = useState(null);
+  const [showSessions,  setShowSessions]  = useState(!!(program?.autoOpenSessions) || !!autoOpenSessionId);
+  const [openSessionId, setOpenSessionId] = useState(autoOpenSessionId ?? null);
+
+  // sync when autoOpenSessionId prop changes (e.g. "continue watching" clicked again)
+  useEffect(() => {
+    if (autoOpenSessionId != null) {
+      setOpenSessionId(autoOpenSessionId);
+      setShowSessions(true);
+    }
+  }, [autoOpenSessionId]);
   const [lessonNavOpen,      setLessonNavOpen]      = useState(false);
   const [showEnroll,         setShowEnroll]         = useState(false);
   const [enrolled,           setEnrolled]           = useState(false);

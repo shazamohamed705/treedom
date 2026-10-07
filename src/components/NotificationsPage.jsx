@@ -100,33 +100,33 @@ function NotifRow({ notif, role, onRead }) {
   return (
     <div
       onClick={handleClick}
-      className={`flex items-start gap-3 px-4 py-3.5 border-b border-slate-100 last:border-0
+      className={`flex items-start gap-4 px-5 py-4 border-b border-slate-100 last:border-0
                   transition-colors cursor-pointer
-                  ${notif.is_read ? "bg-white" : urgent ? "bg-red-50 hover:bg-red-100" : "bg-teal-50/40 hover:bg-teal-50/70"}`}
+                  ${notif.is_read ? "bg-white hover:bg-slate-50" : urgent ? "bg-red-50 hover:bg-red-100" : "bg-teal-50/40 hover:bg-teal-50/70"}`}
       dir="rtl"
     >
       {/* icon bubble */}
-      <div className="shrink-0 mt-0.5 w-8 h-8 rounded-full flex items-center justify-center"
+      <div className="shrink-0 mt-0.5 w-10 h-10 rounded-full flex items-center justify-center"
         style={{ background: cfg.bg }}>
         <NotifIcon type={cfg.icon} color={cfg.dot} />
       </div>
 
       {/* text block */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm leading-snug text-right ${notif.is_read ? "text-slate-600" : "text-slate-800 font-medium"}`}>
+        <p className={`text-[13px] leading-snug text-right ${notif.is_read ? "text-slate-600" : "text-slate-800 font-semibold"}`}>
           {notif.title ?? notif.text ?? ""}
         </p>
         {notif.body && (
-          <p className="text-xs text-slate-500 mt-0.5 text-right leading-relaxed">
+          <p className="text-xs text-slate-500 mt-1 text-right leading-relaxed">
             {notif.body}
           </p>
         )}
-        <p className="text-[11px] text-slate-400 mt-1 text-right">{notif.created_at ?? notif.time ?? ""}</p>
+        <p className="text-[11px] text-slate-400 mt-1.5 text-right">{notif.created_at ?? notif.time ?? ""}</p>
       </div>
 
       {/* unread dot */}
       {!notif.is_read && (
-        <span className="w-2 h-2 rounded-full shrink-0 mt-2" style={{ background: cfg.dot }} />
+        <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-2" style={{ background: cfg.dot }} />
       )}
     </div>
   );
@@ -207,8 +207,8 @@ export default function NotificationsPage({ forceRole } = {}) {
     : false;
 
   return (
-    <main className="flex-1 overflow-y-auto bg-white px-3 py-3" dir="rtl">
-      <div className="max-w-2xl w-full">
+    <main className="flex-1 overflow-y-auto bg-slate-50 px-4 py-5" dir="rtl">
+      <div className="w-full">
 
         {/* ── page header ── */}
         <div className="flex items-center justify-between mb-5 px-1">
@@ -249,7 +249,7 @@ export default function NotificationsPage({ forceRole } = {}) {
         </div>
 
         {/* ── card ── */}
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
 
           {/* error */}
           {error && (

@@ -168,7 +168,7 @@ export function Bar({ value, color = "#14b8a6" }) {
 }
 
 // ── section header ─────────────────────────────────────────────────────────────
-export function SecHeader({ title, onNext, onPrev }) {
+export function SecHeader({ title, onNext, onPrev, onViewAll }) {
   return (
     <div className="flex items-center justify-between mb-2" dir="rtl">
       <h2 className="text-sm font-bold text-slate-800">{title}</h2>
@@ -183,9 +183,15 @@ export function SecHeader({ title, onNext, onPrev }) {
             <IcoChevR/>
           </button>
         </div>
-        <button className="text-[11px] font-semibold transition hover:opacity-70" style={{ color: "#14b8a6" }}>
-          عرض الكل
-        </button>
+        {onViewAll && (
+          <button
+            onClick={onViewAll}
+            className="text-[11px] font-semibold transition hover:opacity-70"
+            style={{ color: "#14b8a6" }}
+          >
+            عرض الكل
+          </button>
+        )}
       </div>
     </div>
   );

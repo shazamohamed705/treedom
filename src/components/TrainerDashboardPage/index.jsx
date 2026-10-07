@@ -8,6 +8,7 @@ import UpcomingSessions    from "../UpcomingSessions";
 import EnrollmentChart     from "../EnrollmentChart";
 import ProgramDonut        from "../ProgramDonut";
 import TrainerActivityFeed from "../TrainerActivityFeed";
+import { DONUT_COLORS, BRAND } from "../../constants/colors";
 
 // ── month label helper ────────────────────────────────────────────────────────
 const MONTH_AR = {
@@ -144,7 +145,7 @@ export default function TrainerDashboardPage({ onViewSession, onAddProgram }) {
   }));
 
   // ── donut chart data ──────────────────────────────────────────────────────
-  const DONUT_COLORS = ["#14b8a6", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981"];
+  // DONUT_COLORS imported from src/constants/colors.js
   const donutData = (charts.program_distribution ?? []).map((item, i) => ({
     name:  item.category ?? `تصنيف ${i + 1}`,
     value: item.percent  ?? item.count ?? 0,

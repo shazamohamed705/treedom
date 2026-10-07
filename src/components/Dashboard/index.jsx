@@ -8,6 +8,7 @@ import ProgramDonut     from "../ProgramDonut";
 import ActiveTeam       from "../ActiveTeam";
 import NotifFeed        from "../NotifFeed";
 import { fetchDashboard, fetchTrainerDashboard, fetchSessions } from "../../services/api";
+import { DONUT_COLORS, CHART_COLORS } from "../../constants/colors";
 import { isIndeCoach } from "../../services/auth";
 import { computeStatus } from "../SessionsPage";
 import { activityLogFromDashboard } from "../orgActivityLog";
@@ -55,8 +56,8 @@ function sessionStartMs(s) {
   }
 }
 
-// ── donut colour palette ───────────────────────────────────────────────────────
-const DONUT_COLORS = ["#14b8a6", "#3b82f6", "#8b5cf6", "#f59e0b", "#e879f9", "#fb923c"];
+// ── donut colour palette — imported from central colors file ─────────────────
+// (see src/constants/colors.js to change them in one place)
 
 // ── normalise session for UpcomingSessions ────────────────────────────────────
 function normaliseSession(s) {
@@ -100,10 +101,10 @@ function normaliseProgram(p) {
 
 // ── stat card shapes (built entirely from API) ────────────────────────────────
 const STAT_SHAPES = [
-  { label: "إجمالي المتدربين", icon: "users",      color: "teal",   chartColor: "#5AEACF" },
-  { label: "البرامج النشطة",   icon: "graduation", color: "blue",   chartColor: "#60a5fa" },
-  { label: "جلسات تفاعلية",    icon: "video",      color: "purple", chartColor: "#a78bfa" },
-  { label: "معدل الإنجاز",     icon: "chart",      color: "green",  chartColor: "#34d399" },
+  { label: "إجمالي المتدربين", icon: "users",      color: "teal",   chartColor: CHART_COLORS.teal   },
+  { label: "البرامج النشطة",   icon: "graduation", color: "blue",   chartColor: CHART_COLORS.blue   },
+  { label: "جلسات تفاعلية",    icon: "video",      color: "purple", chartColor: CHART_COLORS.purple },
+  { label: "معدل الإنجاز",     icon: "chart",      color: "green",  chartColor: CHART_COLORS.green  },
 ];
 
 // ── main ──────────────────────────────────────────────────────────────────────

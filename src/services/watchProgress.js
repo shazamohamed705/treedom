@@ -15,13 +15,49 @@ function writeStore(store) {
   } catch { /* quota / private mode */ }
 }
 
+// مفتاح منفصل لحفظ آخر موضع تشغيل (بغض النظر عن الاكتمال)
+const RESUME_KEY = "resume_positions";
+
+function readResume() {
+  try { return JSON.parse(localStorage.getItem(RESUME_KEY) || "{}"); } catch { return {}; }
+}
+function writeResume(obj) {
+  try { localStorage.setItem(RESUME_KEY, JSON.stringify(obj)); } catch {}
+}
+
 export function saveWatchProgress(sessionId, { programId, currentTime, duration } = {}) {
   if (sessionId == null || !duration || duration <= 0) return;
   const key = String(sessionId);
   const percent = currentTime >= duration - 2
     ? 100
     : Math.min(100, Math.max(0, Math.round((currentTime / duration) * 100)));
+
+  // دايماً احفظ الـ currentTime في الـ resume store عشان الاستكمال يشتغل
+  if (currentTime > 5) {
+    const resume = readResume();
+    resume[key] = {
+      currentTime: Number(currentTime),
+      duration:    Number(duration),
+      percent,
+      updatedAt:   Date.now(),
+    };
+    writeResume(resume);
+  }
+
   const prev = readStore();
+
+  // لو اكتمل 95%+ → اشيله من قائمة "استكمال المشاهدة" ومن resume_positions
+  if (percent >= 95) {
+    delete prev[key];
+    writeStore(prev);
+    // امسح من resume_positions عشان مايفتحش على النهاية
+    const resume = readResume();
+    delete resume[key];
+    writeResume(resume);
+    try { window.dispatchEvent(new CustomEvent("treedom:watch", { detail: { sessionId: key, programId: programId != null ? String(programId) : null, percent, completed: true } })); } catch {}
+    return;
+  }
+
   prev[key] = {
     sessionId: key,
     programId: programId != null ? String(programId) : (prev[key]?.programId ?? null),
@@ -31,7 +67,7 @@ export function saveWatchProgress(sessionId, { programId, currentTime, duration 
     updatedAt: Date.now(),
   };
   writeStore(prev);
-  try { window.dispatchEvent(new CustomEvent("treedom:watch")); } catch { /* ignore */ }
+  try { window.dispatchEvent(new CustomEvent("treedom:watch", { detail: { sessionId: key, programId: programId != null ? String(programId) : null, percent, completed: false } })); } catch {}
 }
 
 export function getWatchProgress(sessionId) {
@@ -40,16 +76,23 @@ export function getWatchProgress(sessionId) {
 }
 
 export function getResumeTime(sessionId) {
+  if (sessionId == null) return 0;
+  const key = String(sessionId);
+  // أولاً: resume store (بيحتفظ بالموضع حتى بعد الاكتمال)
+  const resume = readResume();
+  if (resume[key]?.currentTime > 5) return Number(resume[key].currentTime);
+  // ثانياً: watch progress store (للجلسات غير المكتملة)
   const entry = getWatchProgress(sessionId);
-  if (!entry || entry.percent >= 95) return 0;
-  return Number(entry.currentTime) || 0;
+  if (entry?.currentTime > 5) return Number(entry.currentTime);
+  return 0;
 }
 
 export function getLastWatchForProgram(programId) {
   if (programId == null) return null;
   const pid = String(programId);
+  // بس الجلسات اللي فيها تقدم فعلي وما اكتملتش
   return Object.values(readStore())
-    .filter(e => e.programId === pid)
+    .filter(e => e.programId === pid && (e.percent ?? 0) > 0 && (e.percent ?? 0) < 95)
     .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0] ?? null;
 }
 
@@ -58,22 +101,36 @@ export function getProgramLocalPercent(programId) {
 }
 
 export function getContinueSessionId(programId) {
-  const last = getLastWatchForProgram(programId);
-  if (last && last.percent < 95) return last.sessionId;
   if (programId == null) return null;
   const pid = String(programId);
+  // أحدث جلسة غير مكتملة (percent < 95) في هذا البرنامج
   const incomplete = Object.values(readStore())
-    .filter(e => e.programId === pid && e.percent < 95)
-    .sort((a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0))[0];
-  return incomplete?.sessionId ?? last?.sessionId ?? null;
+    .filter(e => e.programId === pid && (e.percent ?? 0) < 95 && (e.percent ?? 0) > 0)
+    .sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))[0];
+  return incomplete?.sessionId ?? null;
 }
 
 function sessionKey(s) {
   return s?.session_id ?? s?.id ?? null;
 }
 
+/** هل وقت نهاية الجلسة عدى؟ */
+function sessionEndedByTime(s) {
+  const date = s?.date;
+  const ends = s?.ends_at ?? s?.timeTo ?? s?.end_time;
+  if (!date) return false;
+  try {
+    const [h = 23, m = 59] = String(ends || "23:59").split(":").map(Number);
+    const d = new Date(date + "T00:00:00");
+    d.setHours(h, m, 59, 0);
+    return Date.now() > d.getTime();
+  } catch { return false; }
+}
+
 function isIncomplete(s, local) {
   if (local && local.percent >= 95) return false;
+  // جلسة وقتها عدى وما اتشاهدتش خالص — مش مناسبة للاستكمال
+  if (sessionEndedByTime(s) && (!local || local.percent === 0)) return false;
   const pct = local?.percent ?? s?.progress_percent ?? s?.progress ?? 0;
   const status = String(s?.status ?? s?.status_label ?? "").toLowerCase();
   if (status === "completed" || status === "مكتملة" || status === "2") {
@@ -106,11 +163,18 @@ export async function resolveContinueSession(programId, { fetchEnrollmentDetail,
       const local = getWatchProgress(sid);
       const api = progMap[String(sid)] ?? progMap[String(s.id)] ?? {};
       return isIncomplete({ ...s, ...api }, local);
-    }) ?? slist[0];
+    }) ?? slist.find(s => !sessionEndedByTime(s)) ?? slist[0];
 
     if (pick) {
       const id = sessionKey(pick);
-      if (id != null) return { id };
+      if (id != null) return {
+        id,
+        title:    pick.title,
+        date:     pick.date,
+        ends_at:  pick.ends_at,
+        type:     pick.type,
+        videoUrl: pick.video_url ?? pick.videoUrl ?? null,
+      };
     }
   } catch { /* try sessions list */ }
 
@@ -123,10 +187,17 @@ export async function resolveContinueSession(programId, { fetchEnrollmentDetail,
     const pick = pool.find(s => {
       const sid = sessionKey(s);
       return isIncomplete(s, getWatchProgress(sid));
-    }) ?? pool[0];
+    }) ?? pool.find(s => !sessionEndedByTime(s)) ?? pool[0];
     if (pick) {
       const id = sessionKey(pick);
-      if (id != null) return { id };
+      if (id != null) return {
+        id,
+        title:    pick.title,
+        date:     pick.date,
+        ends_at:  pick.ends_at,
+        type:     pick.type,
+        videoUrl: pick.video_url ?? pick.videoUrl ?? null,
+      };
     }
   } catch { /* none */ }
 
