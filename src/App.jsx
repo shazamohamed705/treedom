@@ -13,97 +13,98 @@ import {
 // ── always-loaded (part of the shell) ────────────────────────────────────────
 import Sidebar from "./components/Sidebar";
 import Topbar from "./components/Topbar";
+import QuizNavbar from "./components/shared/QuizNavbar";
 import { NotificationProvider } from "./context/NotificationContext";
 import { useQuizMode } from "./context/QuizModeContext";
-import SessionNotifyBanner from "./components/SessionNotifyBanner";
-import ToastProvider      from "./components/ToastProvider";
+import SessionNotifyBanner from "./components/shared/SessionNotifyBanner";
+import ToastProvider      from "./components/shared/ToastProvider";
 import { treedomData, companyData } from "./data/mockData";
 import { fetchCompanyDashboard } from "./services/api";
 
 // ── lazy page chunks ──────────────────────────────────────────────────────────
-const Dashboard              = lazy(() => import("./components/Dashboard"));
-const CompanyDashboard       = lazy(() => import("./components/CompanyDashboard"));
-const ProgramsGrid           = lazy(() => import("./components/ProgramsGrid"));
-const AddProgramPage         = lazy(() => import("./components/AddProgramPage"));
-const CompanyAddProgramPage  = lazy(() => import("./components/CompanyAddProgramPage"));
-const EditProgramPage        = lazy(() => import("./components/EditProgramPage"));
-const ProgramViewPage        = lazy(() => import("./components/ProgramViewPage"));
-const SessionsPage           = lazy(() => import("./components/SessionsPage"));
-const QuizzesPage            = lazy(() => import("./components/QuizzesPage"));
-const SessionViewPage        = lazy(() => import("./components/SessionViewPage"));
-const SessionAddContentPage  = lazy(() => import("./components/SessionEditPage"));
-const ReviewRequestsPage     = lazy(() => import("./components/ReviewRequestsPage"));
-const TodaySessionsPage      = lazy(() => import("./components/TodaySessionsPage"));
-const AddSessionPage         = lazy(() => import("./components/AddSessionPage"));
-const AttendancePage         = lazy(() => import("./components/AttendancePage"));
-const TrainerDashboardPage   = lazy(() => import("./components/TrainerDashboardPage"));
-const TrainerMyRequestsPage  = lazy(() => import("./components/TrainerMyRequestsPage"));
-const TrainerMyProfilePage   = lazy(() => import("./components/TrainerMyProfilePage"));
-const TrainerProgramsPage    = lazy(() => import("./components/TrainerProgramsPage"));
-const TrainerProgramViewPage = lazy(() => import("./components/TrainerProgramViewPage"));
-const TrainerEditProgramPage = lazy(() => import("./components/TrainerEditProgramPage"));
-const CoachAddProgramPage    = lazy(() => import("./components/CoachAddProgramPage"));
-const TrainerSessionsPage    = lazy(() => import("./components/TrainerSessionsPage"));
-const TrainerSessionViewPage = lazy(() => import("./components/TrainerSessionViewPage"));
-const AddCoachSessionPage    = lazy(() => import("./components/AddCoachSessionPage"));
-const TrainerRequestsPage    = lazy(() => import("./components/TrainerRequestsPage"));
-const TrainerNotificationsPage = lazy(() => import("./components/TrainerNotificationsPage"));
-const AssessmentsPage        = lazy(() => import("./components/AssessmentsPage"));
-const TasksPage              = lazy(() => import("./components/TasksPage"));
-const GradingPage            = lazy(() => import("./components/GradingPage"));
-const CompanyNotificationsPage = lazy(() => import("./components/CompanyNotificationsPage"));
-const NotificationsPage      = lazy(() => import("./components/NotificationsPage"));
-const OrgActivityLogPage     = lazy(() => import("./components/OrgActivityLogPage"));
-const UserDashboardPage      = lazy(() => import("./components/UserDashboard"));
-const ProgramsBrowsePage     = lazy(() => import("./components/ProgramsBrowsePage"));
-const MyProgramsPage         = lazy(() => import("./components/MyProgramsPage"));
-const ContinueWatchingPage   = lazy(() => import("./components/ContinueWatchingPage"));
-const MyEnrolledProgramsPage = lazy(() => import("./components/MyEnrolledProgramsPage"));
-const SuggestedProgramsPage  = lazy(() => import("./components/SuggestedProgramsPage"));
-const UserProfilePage        = lazy(() => import("./components/UserProfilePage"));
-const TrainingRecordPage     = lazy(() => import("./components/TrainingRecordPage"));
-const FavoritesPage          = lazy(() => import("./components/FavoritesPage"));
-const SupportPage            = lazy(() => import("./components/SupportPage"));
-const PaymentsPage           = lazy(() => import("./components/PaymentsPage"));
-const EmployeesPage          = lazy(() => import("./components/EmployeesPage"));
-const EmployeeViewPage       = lazy(() => import("./components/EmployeeViewPage"));
-const EmployeeProgramsPage   = lazy(() => import("./components/EmployeeProgramsPage"));
-const EnrolledProgramDetailPage = lazy(() => import("./components/EnrolledProgramDetailPage"));
-const ProgramDetailPage      = lazy(() => import("./components/ProgramDetailPage"));
-const CustomRequestPage      = lazy(() => import("./components/CustomRequestPage"));
-const NegotiationRequestsPage = lazy(() => import("./components/NegotiationRequestsPage"));
-const CompanyBrowseProgramsPage = lazy(() => import("./components/CompanyBrowseProgramsPage"));
-const CompanyPaymentsPage    = lazy(() => import("./components/CompanyPaymentsPage"));
-const CompanySecuritySettingsPage = lazy(() => import("./components/CompanySecuritySettingsPage"));
-const CompanyUsersSettingsPage = lazy(() => import("./components/CompanyUsersSettingsPage"));
-const CompanyProfileSettingsPage = lazy(() => import("./components/CompanyProfileSettingsPage"));
-const TrainersPage           = lazy(() => import("./components/TrainersPage"));
-const AddTrainerPage         = lazy(() => import("./components/AddTrainerPage"));
-const TrainerProfilePage     = lazy(() => import("./components/TrainerProfilePage"));
-const TraineesPage           = lazy(() => import("./components/TraineesPage"));
-const RegisterPage           = lazy(() => import("./components/RegisterPage"));
-const RegisterStep2Page      = lazy(() => import("./components/RegisterStep2Page"));
-const RegisterStep2Individual = lazy(() => import("./components/RegisterStep2Individual"));
-const RegisterStep3Individual = lazy(() => import("./components/RegisterStep3Individual"));
-const RegisterStep4Individual = lazy(() => import("./components/RegisterStep4Individual"));
-const RegisterTraineeStep3Page = lazy(() => import("./components/RegisterTraineeStep3Page"));
-const RegisterTraineeActivatePage = lazy(() => import("./components/RegisterTraineeActivatePage"));
-const RegisterStep3Page      = lazy(() => import("./components/RegisterStep3Page"));
-const RegisterStep3bPage     = lazy(() => import("./components/RegisterStep3bPage"));
-const RegisterStep4Page      = lazy(() => import("./components/RegisterStep4Page"));
-const RegisterCompanyStep2Page = lazy(() => import("./components/RegisterCompanyStep2Page"));
-const RegisterCompanyActivatePage = lazy(() => import("./components/RegisterCompanyActivatePage"));
-const RegisterSuccessPage    = lazy(() => import("./components/RegisterSuccessPage"));
-const LoginPage              = lazy(() => import("./components/LoginPage"));
-const FinancePage            = lazy(() => import("./components/FinancePage"));
-const FinanceRequestPage     = lazy(() => import("./components/FinanceRequestPage"));
-const UserSessionsPage       = lazy(() => import("./components/UserSessionsPage"));
-const UserSessionViewPage    = lazy(() => import("./components/UserSessionViewPage"));
-const UserProgramViewPage    = lazy(() => import("./components/UserProgramViewPage"));
-const UserProgramSessionPage = lazy(() => import("./components/UserProgramSessionPage"));
-const SettingsPage           = lazy(() => import("./components/SettingsPage"));
-const FundingRequestsPage    = lazy(() => import("./components/FundingRequestsPage"));
-const FundingRequestReviewPage = lazy(() => import("./components/FundingRequestReviewPage"));
+const Dashboard              = lazy(() => import("./components/org/Dashboard"));
+const CompanyDashboard       = lazy(() => import("./components/company/CompanyDashboard"));
+const ProgramsGrid           = lazy(() => import("./components/shared/ProgramsGrid"));
+const AddProgramPage         = lazy(() => import("./components/org/AddProgramPage"));
+const CompanyAddProgramPage  = lazy(() => import("./components/company/CompanyAddProgramPage"));
+const EditProgramPage        = lazy(() => import("./components/org/EditProgramPage"));
+const ProgramViewPage        = lazy(() => import("./components/org/ProgramViewPage"));
+const SessionsPage           = lazy(() => import("./components/org/SessionsPage"));
+const QuizzesPage            = lazy(() => import("./components/org/QuizzesPage"));
+const SessionViewPage        = lazy(() => import("./components/org/SessionViewPage"));
+const SessionAddContentPage  = lazy(() => import("./components/org/SessionEditPage"));
+const ReviewRequestsPage     = lazy(() => import("./components/org/ReviewRequestsPage"));
+const TodaySessionsPage      = lazy(() => import("./components/org/TodaySessionsPage"));
+const AddSessionPage         = lazy(() => import("./components/org/AddSessionPage"));
+const AttendancePage         = lazy(() => import("./components/org/AttendancePage"));
+const TrainerDashboardPage   = lazy(() => import("./components/trainer/TrainerDashboardPage"));
+const TrainerMyRequestsPage  = lazy(() => import("./components/trainer/TrainerMyRequestsPage"));
+const TrainerMyProfilePage   = lazy(() => import("./components/trainer/TrainerMyProfilePage"));
+const TrainerProgramsPage    = lazy(() => import("./components/trainer/TrainerProgramsPage"));
+const TrainerProgramViewPage = lazy(() => import("./components/trainer/TrainerProgramViewPage"));
+const TrainerEditProgramPage = lazy(() => import("./components/trainer/TrainerEditProgramPage"));
+const CoachAddProgramPage    = lazy(() => import("./components/trainer/CoachAddProgramPage"));
+const TrainerSessionsPage    = lazy(() => import("./components/trainer/TrainerSessionsPage"));
+const TrainerSessionViewPage = lazy(() => import("./components/trainer/TrainerSessionViewPage"));
+const AddCoachSessionPage    = lazy(() => import("./components/trainer/AddCoachSessionPage"));
+const TrainerRequestsPage    = lazy(() => import("./components/trainer/TrainerRequestsPage"));
+const TrainerNotificationsPage = lazy(() => import("./components/trainer/TrainerNotificationsPage"));
+const AssessmentsPage        = lazy(() => import("./components/org/AssessmentsPage"));
+const TasksPage              = lazy(() => import("./components/org/TasksPage"));
+const GradingPage            = lazy(() => import("./components/org/GradingPage"));
+const CompanyNotificationsPage = lazy(() => import("./components/company/CompanyNotificationsPage"));
+const NotificationsPage      = lazy(() => import("./components/org/NotificationsPage"));
+const OrgActivityLogPage     = lazy(() => import("./components/org/OrgActivityLogPage"));
+const UserDashboardPage      = lazy(() => import("./components/user/UserDashboard"));
+const ProgramsBrowsePage     = lazy(() => import("./components/user/ProgramsBrowsePage"));
+const MyProgramsPage         = lazy(() => import("./components/user/MyProgramsPage"));
+const ContinueWatchingPage   = lazy(() => import("./components/user/ContinueWatchingPage"));
+const MyEnrolledProgramsPage = lazy(() => import("./components/user/MyEnrolledProgramsPage"));
+const SuggestedProgramsPage  = lazy(() => import("./components/user/SuggestedProgramsPage"));
+const UserProfilePage        = lazy(() => import("./components/user/UserProfilePage"));
+const TrainingRecordPage     = lazy(() => import("./components/user/TrainingRecordPage"));
+const FavoritesPage          = lazy(() => import("./components/user/FavoritesPage"));
+const SupportPage            = lazy(() => import("./components/user/SupportPage"));
+const PaymentsPage           = lazy(() => import("./components/user/PaymentsPage"));
+const EmployeesPage          = lazy(() => import("./components/company/EmployeesPage"));
+const EmployeeViewPage       = lazy(() => import("./components/company/EmployeeViewPage"));
+const EmployeeProgramsPage   = lazy(() => import("./components/company/EmployeeProgramsPage"));
+const EnrolledProgramDetailPage = lazy(() => import("./components/company/EnrolledProgramDetailPage"));
+const ProgramDetailPage      = lazy(() => import("./components/company/ProgramDetailPage"));
+const CustomRequestPage      = lazy(() => import("./components/company/CustomRequestPage"));
+const NegotiationRequestsPage = lazy(() => import("./components/org/NegotiationRequestsPage"));
+const CompanyBrowseProgramsPage = lazy(() => import("./components/company/CompanyBrowseProgramsPage"));
+const CompanyPaymentsPage    = lazy(() => import("./components/company/CompanyPaymentsPage"));
+const CompanySecuritySettingsPage = lazy(() => import("./components/company/CompanySecuritySettingsPage"));
+const CompanyUsersSettingsPage = lazy(() => import("./components/company/CompanyUsersSettingsPage"));
+const CompanyProfileSettingsPage = lazy(() => import("./components/company/CompanyProfileSettingsPage"));
+const TrainersPage           = lazy(() => import("./components/org/TrainersPage"));
+const AddTrainerPage         = lazy(() => import("./components/org/AddTrainerPage"));
+const TrainerProfilePage     = lazy(() => import("./components/trainer/TrainerProfilePage"));
+const TraineesPage           = lazy(() => import("./components/org/TraineesPage"));
+const RegisterPage           = lazy(() => import("./components/auth/RegisterPage"));
+const RegisterStep2Page      = lazy(() => import("./components/auth/RegisterStep2Page"));
+const RegisterStep2Individual = lazy(() => import("./components/auth/RegisterStep2Individual"));
+const RegisterStep3Individual = lazy(() => import("./components/auth/RegisterStep3Individual"));
+const RegisterStep4Individual = lazy(() => import("./components/auth/RegisterStep4Individual"));
+const RegisterTraineeStep3Page = lazy(() => import("./components/auth/RegisterTraineeStep3Page"));
+const RegisterTraineeActivatePage = lazy(() => import("./components/auth/RegisterTraineeActivatePage"));
+const RegisterStep3Page      = lazy(() => import("./components/auth/RegisterStep3Page"));
+const RegisterStep3bPage     = lazy(() => import("./components/auth/RegisterStep3bPage"));
+const RegisterStep4Page      = lazy(() => import("./components/auth/RegisterStep4Page"));
+const RegisterCompanyStep2Page = lazy(() => import("./components/auth/RegisterCompanyStep2Page"));
+const RegisterCompanyActivatePage = lazy(() => import("./components/auth/RegisterCompanyActivatePage"));
+const RegisterSuccessPage    = lazy(() => import("./components/auth/RegisterSuccessPage"));
+const LoginPage              = lazy(() => import("./components/auth/LoginPage"));
+const FinancePage            = lazy(() => import("./components/org/FinancePage"));
+const FinanceRequestPage     = lazy(() => import("./components/org/FinanceRequestPage"));
+const UserSessionsPage       = lazy(() => import("./components/user/UserSessionsPage"));
+const UserSessionViewPage    = lazy(() => import("./components/user/UserSessionViewPage"));
+const UserProgramViewPage    = lazy(() => import("./components/user/UserProgramViewPage"));
+const UserProgramSessionPage = lazy(() => import("./components/user/UserProgramSessionPage"));
+const SettingsPage           = lazy(() => import("./components/org/SettingsPage"));
+const FundingRequestsPage    = lazy(() => import("./components/org/FundingRequestsPage"));
+const FundingRequestReviewPage = lazy(() => import("./components/org/FundingRequestReviewPage"));
 
 // ── Systems (org-level switcher) ───────────────────────────────────────────
 const SYSTEMS = [
@@ -403,7 +404,7 @@ function navIndexFromPath(pathname, items, getPath) {
 function DashboardShell() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { quizActive, exitQuiz } = useQuizMode();
+  const { quizActive, quizMeta, exitQuiz } = useQuizMode();
 
   // إذا تغير الـ route (المستخدم نفّذ navigate من مكان آخر) نعيد تعيين quizActive
   useEffect(() => {
@@ -733,10 +734,7 @@ function DashboardShell() {
       )}
       <div className="flex flex-col flex-1 min-w-0">
 
-
-
-        {!quizActive && (
-          <Topbar
+        <Topbar
             data={current.data}
             onToggleSidebar={handleToggleNav}
             systemLabel={dynamicSystemLabel}
@@ -775,7 +773,7 @@ function DashboardShell() {
               }
             }}
           />
-        )}
+        {quizActive && <QuizNavbar meta={quizMeta} />}
         {!quizActive && <SessionNotifyBanner />}
 
         <div className="flex-1 min-h-0 flex flex-col" dir="ltr">

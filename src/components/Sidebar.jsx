@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getNavIcon, IconLogout } from "./Icons";
+import { getNavIcon, IconLogout } from "./shared/Icons";
 import { isIndeCoach } from "../services/auth";
 
 // ── collapse toggle icon ─────────────────────────────────────────────────────
@@ -42,7 +42,17 @@ function TreedomLogo({ size = 32 }) {
 
 export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setCollapsed, mobileOpen = false, onClose, onLogout, onSettingsSub, onChildNav, activeSettingsChild, activeChildPath }) {
   const isOpen = mobileOpen;
-  const [openNav, setOpenNav] = useState(-1);
+
+  // initialise open state from current active path (handles direct URL navigation)
+  const [openNav, setOpenNav] = useState(() => {
+    if (activeChildPath) {
+      const idx = (data.navItems ?? []).findIndex(
+        it => it.children?.some(c => c.path === activeChildPath)
+      );
+      if (idx >= 0) return idx;
+    }
+    return -1;
+  });
   const itemRefs = useRef([]);
 
   useEffect(() => {
@@ -51,13 +61,20 @@ export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setC
     if (idx >= 0) setOpenNav(idx);
   }, [activeSettingsChild, data.navItems]);
 
-  // Auto-open parent when a child route is active
+  // Auto-open parent when a child route is active (e.g. direct URL navigation)
   useEffect(() => {
+    if (!activeChildPath) return;
     const idx = (data.navItems ?? []).findIndex(
       it => it.children?.some(c => c.path === activeChildPath)
     );
     if (idx >= 0) setOpenNav(idx);
   }, [activeChildPath, data.navItems]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also auto-open if activeNav points to an item that has children
+  useEffect(() => {
+    const item = data.navItems?.[activeNav];
+    if (item?.children?.length) setOpenNav(activeNav);
+  }, [activeNav, data.navItems]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (openNav < 0) return;
@@ -117,8 +134,15 @@ export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setC
               const isSettings  = item.icon === "settings";
               const hasChildren = !!(item.children?.length);
               const isOpenMenu  = openNav === i && !collapsed;
-              const isActive    = !isSettings && activeNav === i;
-              const showSubMenu = (isSettings || hasChildren) && isOpenMenu;
+              // child active: current URL segment matches one of the children paths
+              const childIsActive = !!(activeChildPath && hasChildren &&
+                item.children.some(c => c.path === activeChildPath));
+              // also active if activeNav points to this parent (set by navIndexFromPath via kids.some)
+              const parentActive = hasChildren && activeNav === i;
+              const isActive     = !isSettings && !hasChildren && activeNav === i;
+              // highlight whenever: child page is open, activeNav points here, or dropdown is open
+              const parentHighlight = childIsActive || parentActive || (hasChildren && isOpenMenu);
+              const showSubMenu  = (isSettings || hasChildren) && isOpenMenu;
 
               return (
                 <div key={i} ref={el => { itemRefs.current[i] = el; }}>
@@ -137,7 +161,7 @@ export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setC
                       w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm
                       transition-all duration-150
                       ${collapsed ? "lg:justify-center" : ""}
-                      ${isActive
+                      ${isActive || parentHighlight
                         ? "bg-teal-400 text-[#0f2a4a] font-semibold shadow-sm"
                         : "text-white"
                       }
@@ -154,24 +178,31 @@ export default function Sidebar({ data, activeNav, setActiveNav, collapsed, setC
                     )}
                   </button>
 
-                  {showSubMenu && isSettings && !hasChildren && (
+                  {showSubMenu && isSettings && (
                     <div className="mt-0.5 mr-3 space-y-0.5">
-                      {[
-                        { label: "إعدادات المنظومة العامة",   sub: "main"       },
-                        { label: "إدارة المجالات والتصنيفات", sub: "categories" },
-                        { label: "الصلاحيات والمستخدمين",     sub: "users"      },
-                      ].filter(s => !(isIndeCoach() && (s.sub === "main" || s.sub === "users"))).map(s => {
-                        const childActive = activeSettingsChild === s.sub;
+                      {(hasChildren
+                        // use children from navItems data (supports sub or path)
+                        ? item.children.filter(s => !(isIndeCoach() && (s.sub === "main" || s.sub === "users" || s.sub === "trainees")))
+                        // fallback: hardcoded list
+                        : [
+                            { label: "إعدادات المنظومة العامة",   sub: "main"       },
+                            { label: "إدارة المجالات والتصنيفات", sub: "categories" },
+                            { label: "الصلاحيات والمستخدمين",     sub: "users"      },
+                            { label: "إضافة طلاب",               sub: "trainees"   },
+                          ].filter(s => !(isIndeCoach() && (s.sub === "main" || s.sub === "users" || s.sub === "trainees")))
+                      ).map(s => {
+                        const subKey = s.sub ?? s.path;
+                        const childActive = activeSettingsChild === subKey;
                         return (
-                        <button
-                          key={s.sub}
-                          onClick={() => { onSettingsSub?.(s.sub); onClose?.(); }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all text-right
-                            ${childActive ? "bg-teal-400 text-[#0f2a4a] font-semibold" : "text-white hover:bg-white/10"}`}
-                        >
-                          <span className={`w-1 h-1 rounded-full shrink-0 ${childActive ? "bg-[#0f2a4a]" : "bg-teal-400/60"}`} />
-                          {s.label}
-                        </button>
+                          <button
+                            key={subKey}
+                            onClick={() => { onSettingsSub?.(subKey); onClose?.(); }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs transition-all text-right
+                              ${childActive ? "bg-teal-400 text-[#0f2a4a] font-semibold" : "text-white hover:bg-white/10"}`}
+                          >
+                            <span className={`w-1 h-1 rounded-full shrink-0 ${childActive ? "bg-[#0f2a4a]" : "bg-teal-400/60"}`} />
+                            {s.label}
+                          </button>
                         );
                       })}
                     </div>

@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { fetchNotifications, fetchCompanyDashboard, fetchDashboard } from "../services/api";
 import { getUserRole, getToken, getUser, isIndeCoach } from "../services/auth";
-import { dashboardToNotifs } from "../components/companyFollowUp";
-import { activityLogFromDashboard } from "../components/orgActivityLog";
+import { dashboardToNotifs } from "../components/company/companyFollowUp";
+import { activityLogFromDashboard } from "../components/org/orgActivityLog";
 
 // ── context ───────────────────────────────────────────────────────────────────
 export const NotificationContext = createContext(null);

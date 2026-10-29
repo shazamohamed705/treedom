@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { IconSearch, IconBell, IconMenu } from "./Icons";
+import { IconSearch, IconBell, IconMenu } from "./shared/Icons";
 import { useNotifications, isUrgentSessionNotif } from "../context/NotificationContext";
 import { markNotificationRead, markAllNotificationsRead, globalSearchPrograms } from "../services/api";
 import { getUserRole, getUser, isIndeCoach } from "../services/auth";

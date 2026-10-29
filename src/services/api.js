@@ -24,13 +24,21 @@ async function request(path, options = {}) {
     cache: "no-store",
     headers,
   });
-  const json = await res.json();
+  // Some endpoints return 204 No Content or an empty body — guard against that
+  const text = await res.text();
+  const json = text ? JSON.parse(text) : {};
   if (!res.ok || json?.status === false) {
     // collect Laravel validation errors if present
+    console.error(`[API] ${options.method ?? "GET"} ${path} → ${res.status}`, json);
     const validationErrors = json?.errors
-      ? Object.values(json.errors).flat().join(" | ")
+      ? Object.entries(json.errors).map(([field, msgs]) => {
+          const msg = Array.isArray(msgs) ? msgs[0] : msgs;
+          return `${field}: ${msg}`;
+        }).join(" | ")
       : null;
-    throw new Error(validationErrors || json?.message || json?.msg || "حدث خطأ، حاول مرة أخرى");
+    const err = new Error(validationErrors || json?.message || json?.msg || "حدث خطأ، حاول مرة أخرى");
+    err.data = json;
+    throw err;
   }
   return json;
 }
@@ -503,6 +511,33 @@ export async function fetchProgram(id) {
 }
 
 /**
+ * GET /provider/programs/:id/units  (or /trainer/...) — list of a program's units.
+ * Each unit may already include its sessions; otherwise fetch each unit by id.
+ */
+export async function fetchProgramUnits(programId) {
+  return request(`${programsBase()}/${programId}/units`, { headers: authHeaders() });
+}
+
+/**
+ * GET /provider/programs/:id/units/:unitId — a single unit with its sessions.
+ */
+export async function fetchProgramUnit(programId, unitId) {
+  return request(`${programsBase()}/${programId}/units/${unitId}`, { headers: authHeaders() });
+}
+
+/**
+ * POST /provider/programs/:id/units — create a new unit.
+ * body: { title: {ar,en}, description: {ar,en}, sort_order }
+ */
+export async function createProgramUnit(programId, payload) {
+  return request(`${programsBase()}/${programId}/units`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * PUT /provider/programs/:id  or  PUT /trainer/programs/:id
  */
 export async function updateProgram(id, payload) {
@@ -535,6 +570,15 @@ export async function submitProgram(id) {
  */
 export async function fetchCoachPermissions() {
   return request("/provider/coach-permissions", {
+    headers: authHeaders(),
+  });
+}
+
+/**
+ * GET /provider/coaches/list — lightweight list { id, name }
+ */
+export async function fetchCoachesList() {
+  return request(`/provider/coaches/list`, {
     headers: authHeaders(),
   });
 }
@@ -668,6 +712,53 @@ export async function createSession(payload) {
     // don't set Content-Type for FormData — browser sets it with the boundary
     headers: isFormData ? authHeaders() : { "Content-Type": "application/json", ...authHeaders() },
     body: payload,
+  });
+}
+
+/**
+ * POST /provider/sessions  (with program_unit_id)
+ * Convenience wrapper — builds the FormData automatically from a plain object.
+ *
+ * Required fields:
+ *   title_ar, type (0=zoom|1=recorded|2=offline), program_id, program_unit_id
+ * Optional:
+ *   title_en, coach_id, date, starts_at, ends_at, duration_minutes,
+ *   meeting_url, location, video (File)
+ */
+export async function createSessionForUnit({
+  title_ar,
+  title_en,
+  type = 0,
+  program_id,
+  program_unit_id,
+  coach_id,
+  date,
+  starts_at,
+  ends_at,
+  duration_minutes = 60,
+  meeting_url,
+  location,
+  video,
+}) {
+  const fd = new FormData();
+  fd.append("title[ar]",        title_ar || "جلسة");
+  fd.append("title[en]",        title_en || title_ar || "Session");
+  fd.append("type",             String(type));
+  if (program_id)      fd.append("program_id",      String(program_id));
+  if (program_unit_id) fd.append("program_unit_id", String(program_unit_id));
+  if (coach_id)        fd.append("coach_id",        String(coach_id));
+  if (date)            fd.append("date",            date);
+  if (starts_at)       fd.append("starts_at",       starts_at);
+  if (ends_at)         fd.append("ends_at",         ends_at);
+  fd.append("duration_minutes", String(duration_minutes));
+  if (meeting_url)     fd.append("meeting_url",     meeting_url);
+  if (location)        fd.append("location",        location);
+  if (video instanceof File) fd.append("video",     video);
+
+  return request(sessionsBase(), {
+    method: "POST",
+    headers: authHeaders(),
+    body: fd,
   });
 }
 
@@ -1586,6 +1677,16 @@ export async function fetchTraineeEnrollmentDetail(programId) {
 }
 
 /**
+ * GET /trainee/programs/:id/learning
+ * Returns program + progress + curriculum (units with items: sessions & quizzes).
+ */
+export async function fetchMyProgramLearning(programId) {
+  return request(`/trainee/programs/${programId}/learning`, {
+    headers: authHeaders(),
+  });
+}
+
+/**
  * GET /trainee/programs/:id
  * Returns full program details for a trainee.
  */
@@ -2248,4 +2349,208 @@ export async function globalSearchPrograms(query) {
     price:   parseFloat(p.price_amount ?? p.price ?? 0) || 0,
     raw:     p,
   }));
+}
+
+// ── trainee tasks (practical assignments) ─────────────────────────────────────
+
+/**
+ * GET /trainee/programs/:programId/tasks
+ * Returns the list of tasks for a program the trainee is enrolled in.
+ */
+export async function fetchTraineeProgramTasks(programId) {
+  return request(`/trainee/programs/${programId}/tasks`, {
+    headers: authHeaders(),
+  });
+}
+
+/**
+ * POST /trainee/programs/:programId/tasks/:taskId/submit
+ * Submits a practical task. Accepts a file and/or a link.
+ *
+ * @param {number} programId
+ * @param {number} taskId
+ * @param {{ file?: File, link?: string }} payload
+ */
+export async function submitTraineeTask(programId, taskId, { file, link } = {}) {
+  const form = new FormData();
+  if (file) form.append("file", file);
+  if (link) form.append("link", link);
+  return request(`/trainee/programs/${programId}/tasks/${taskId}/submit`, {
+    method:  "POST",
+    headers: authHeaders(),
+    body:    form,
+  });
+}
+
+// ── quizzes ───────────────────────────────────────────────────────────────────
+//
+// category values (من الـ API):
+//   0 = practice  (تدريبي)
+//   1 = evaluated  (مقيّم)
+//   2 = formal     (رسمي)
+//
+// is_assignment:
+//   false / 0 = quiz (اختبار)
+//   true  / 1 = assignment (تكليف / واجب)
+//
+// endpoint: POST /provider/programs/:programId/quizzes
+
+/**
+ * GET /provider/programs/:programId/quizzes
+ * Returns all quizzes attached to a program.
+ */
+export async function fetchProgramQuizzes(programId) {
+  return request(`/provider/programs/${programId}/quizzes`, {
+    headers: authHeaders(),
+  });
+}
+
+/**
+ * POST /provider/programs/:programId/quizzes
+ * Creates a new quiz for a program.
+ *
+ * @param {number} programId
+ * @param {object} payload
+ * @param {string}  payload.title               - عنوان الكويز
+ * @param {string}  [payload.description]        - وصف اختياري
+ * @param {number}  payload.category             - 0=تدريبي | 1=مقيّم | 2=رسمي
+ * @param {boolean} payload.is_assignment        - false=quiz | true=assignment
+ * @param {number}  [payload.duration_minutes]
+ * @param {string}  [payload.starts_at]          - "YYYY-MM-DD HH:mm:ss"
+ * @param {string}  [payload.due_date]           - "YYYY-MM-DD HH:mm:ss"
+ * @param {number}  [payload.weight_percent]
+ * @param {number}  [payload.pass_percent]
+ * @param {boolean} [payload.is_optional]
+ * @param {boolean} [payload.is_published]
+ * @param {boolean} [payload.allow_retake]
+ * @param {number}  [payload.max_attempts]
+ * @param {number}  [payload.cooldown_minutes]
+ * @param {boolean} [payload.retake_only_if_failed]
+ * @param {number[]} [payload.scope_sessions]    - session IDs to scope quiz to
+ * @param {number[]} [payload.scope_units]       - unit IDs to scope quiz to
+ * @param {Array}   [payload.questions]          - أسئلة الكويز
+ */
+export async function createProgramQuiz(programId, payload) {
+  const isFormData = payload instanceof FormData;
+  return request(`/provider/programs/${programId}/quizzes`, {
+    method: "POST",
+    headers: isFormData ? authHeaders() : { "Content-Type": "application/json", ...authHeaders() },
+    body:    isFormData ? payload : JSON.stringify(payload),
+  });
+}
+
+/**
+ * GET /provider/programs/:programId/quizzes/:quizId
+ * Returns a single quiz with all its questions and options.
+ */
+export async function fetchProgramQuiz(programId, quizId) {
+  return request(`/provider/programs/${programId}/quizzes/${quizId}`, {
+    headers: authHeaders(),
+  });
+}
+
+/**
+ * PUT /provider/programs/:programId/quizzes/:quizId
+ * Updates an existing quiz (same payload shape as createProgramQuiz).
+ */
+export async function updateProgramQuiz(programId, quizId, payload) {
+  const isFormData = payload instanceof FormData;
+  return request(`/provider/programs/${programId}/quizzes/${quizId}`, {
+    method: "PUT",
+    headers: isFormData ? authHeaders() : { "Content-Type": "application/json", ...authHeaders() },
+    body:    isFormData ? payload : JSON.stringify(payload),
+  });
+}
+
+/**
+ * DELETE /provider/programs/:programId/quizzes/:quizId
+ */
+export async function deleteProgramQuiz(programId, quizId) {
+  return request(`/provider/programs/${programId}/quizzes/${quizId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+}
+
+/**
+ * POST /provider/programs/:programId/quizzes/:quizId/questions
+ * Adds a new question to an existing quiz.
+ *
+ * @param {object} payload
+ * @param {string}  payload.body         - نص السؤال
+ * @param {number}  payload.type         - 0=mcq | 1=true_false | 2=essay
+ * @param {number}  [payload.sort_order]
+ * @param {Array}   [payload.options]    - [{ body, is_correct, sort_order }]
+ */
+export async function addQuizQuestion(programId, quizId, payload) {
+  return request(`/provider/programs/${programId}/quizzes/${quizId}/questions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * PUT /provider/programs/:programId/quizzes/:quizId/questions/:questionId
+ */
+export async function updateQuizQuestion(programId, quizId, questionId, payload) {
+  return request(`/provider/programs/${programId}/quizzes/${quizId}/questions/${questionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * DELETE /provider/programs/:programId/quizzes/:quizId/questions/:questionId
+ */
+export async function deleteQuizQuestion(programId, quizId, questionId) {
+  return request(`/provider/programs/${programId}/quizzes/${quizId}/questions/${questionId}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+}
+
+// ── trainee quizzes ───────────────────────────────────────────────────────────
+
+/**
+ * GET /trainee/programs/:programId/quizzes/:quizId
+ * Returns full quiz data including questions and options.
+ */
+export async function fetchTraineeQuiz(programId, quizId) {
+  return request(`/trainee/programs/${programId}/quizzes/${quizId}`, {
+    headers: authHeaders(),
+  });
+}
+
+/**
+ * POST /trainee/programs/:programId/quizzes/:quizId/submit
+ * Submits quiz answers as FormData.
+ * answers = [ { question_id, option_id? } | { question_id, essay_answer? } ]
+ */
+export async function submitTraineeQuizAnswers(programId, quizId, answers) {
+  const form = new FormData();
+  answers.forEach((a, i) => {
+    form.append(`answers[${i}][question_id]`, a.question_id);
+    if (a.option_id != null)    form.append(`answers[${i}][option_id]`,    a.option_id);
+    if (a.essay_answer != null) form.append(`answers[${i}][essay_answer]`, a.essay_answer);
+  });
+  return request(`/trainee/programs/${programId}/quizzes/${quizId}/submit`, {
+    method:  "POST",
+    headers: authHeaders(),   // بدون Content-Type — browser يضيفه مع boundary
+    body:    form,
+  });
+}
+
+/**
+ * GET /trainee/programs/:programId/quizzes/:quizId/result
+ * Returns the graded submission (score, final_percent, is_passed, answers with
+ * is_correct + chosen_option) plus `retake` info (allowed, remaining_attempts,
+ * cooldown) — used for the result screen, the attempt pre-check before starting,
+ * and the answers review page.
+ */
+export async function fetchTraineeQuizResult(programId, quizId) {
+  return request(`/trainee/programs/${programId}/quizzes/${quizId}/result`, {
+    headers: authHeaders(),
+  });
 }
